@@ -152,7 +152,7 @@
             "/var/tmp",
             "/run"
           ],
-          "network": "none",
+          "network": "bridge",
           "user": "1000:1000",
           "capDrop": [
             "ALL"
@@ -204,7 +204,10 @@
             "sessions_send",
             "sessions_spawn",
             "session_status",
-            "magi-admin"
+            "magi-admin",
+            "exec",
+            "web_search",
+            "web_fetch"
           ]
         }
       },
