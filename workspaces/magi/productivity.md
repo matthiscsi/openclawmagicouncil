@@ -36,6 +36,22 @@ Use `web_fetch` to interact with local homeserver APIs (e.g., Pi-hole, Jellyfin)
 const status = await web_fetch({ url: "http://pi.hole/admin/api.php?status" });
 ```
 
+### System Health Check (Central Nervous System)
+Before resource-heavy tasks, use `magi_system_snapshot` to ensure the host can handle the load.
+
+```javascript
+// Example: Checking host metrics
+const snapshot = await magi_system_snapshot({});
+```
+
+## Advanced Protocols
+
+### Pattern Blue (Emergency Response)
+If an anomaly is detected (e.g., unusual log entries, high resource usage), trigger an immediate council review with `casper` prioritized.
+
+### Deep Research Mode
+For complex decisions, use `web_search` and `web_fetch` to build a comprehensive dossier in `workspaces/magi/research/` before deliberation.
+
 ## Productivity Workflow
 
 1. **Identify**: User asks for a task (e.g., "Organize my research notes and find missing links").

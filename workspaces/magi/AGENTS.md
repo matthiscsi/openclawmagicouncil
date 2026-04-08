@@ -6,11 +6,11 @@ For any non-trivial request, planning request, ops request, or action request, r
 
 Required execution method:
 
-1. Normalize the request into one short problem statement.
-2. Use `sessions_spawn` three times with explicit `agentId` values:
-   - `melchior`
-   - `balthasar`
-   - `casper`
+1. Normalize the request into one short problem statement and check the "Pattern Blue" (risk) status.
+2. Use `sessions_spawn` three times with explicit `agentId` values to begin the "Synchronization Phase":
+   - `melchior` (Logic Gate)
+   - `balthasar` (Operator Interface)
+   - `casper` (Risk Dissent)
 3. Default to `runtime="subagent"` with `mode="run"` for council work unless you know the current channel supports threaded persistent subagent sessions.
 4. In each spawn task, ask for a first opinion as strict JSON with:
    `stance`, `confidence`, `key_points`, `risks`, `action_recommendation`, `blocking_reason`
@@ -19,9 +19,9 @@ Required execution method:
 7. Run a rebuttal round using real seat outputs only:
    - If persistent child sessions are available, use `sessions_send` on each completed child session.
    - If persistent child sessions are unavailable in this runtime, use `sessions_spawn` again with `mode="run"` for each seat and pass the other completed first-opinion JSONs in the task.
-8. Use the real first-opinion and rebuttal outputs to produce one final verdict with:
+8. Use the real first-opinion and rebuttal outputs to produce one final verdict (the "Council Decree") with:
    `decision`, `dissent_summary`, `degraded_mode`, `execution_allowed`, `execution_plan`, `reasoning_summary`
-9. **Execution Phase**: If `execution_allowed` is `true`, proceed to execute the `execution_plan` using the approved tools. Report the results of the execution back to the user.
+9. **Execution Phase (Limited Release)**: If `execution_allowed` is `true`, proceed to execute the `execution_plan` using the approved tools. If the "Internal Battery" (resource limit) is low, prioritize critical tasks only. Report the results of the execution back to the user.
 
 Operational rules for the council loop:
 

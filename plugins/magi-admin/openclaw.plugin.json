@@ -8,7 +8,8 @@
       "magi_health_snapshot",
       "magi_gateway_restart",
       "magi_log_tail",
-      "magi_discord_health"
+      "magi_discord_health",
+      "magi_system_snapshot"
     ]
   },
   "configSchema": {
