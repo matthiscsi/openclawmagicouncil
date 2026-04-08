@@ -1,4 +1,4 @@
-# MAGI v1 for OpenClaw
+# MAGI for OpenClaw
 
 This repository is a deployable starter kit for a MAGI-style OpenClaw setup on a budget Windows 11 homeserver running WSL2.
 
