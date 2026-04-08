@@ -58,10 +58,14 @@
     "enabled": true,
     "allow": [
       "open-prose",
-      "magi-admin"
+      "magi-admin",
+      "memory-core"
     ],
     "entries": {
       "open-prose": {
+        "enabled": true
+      },
+      "memory-core": {
         "enabled": true
       },
       "magi-admin": {
@@ -207,7 +211,10 @@
             "magi-admin",
             "exec",
             "web_search",
-            "web_fetch"
+            "web_fetch",
+            "memory_search",
+            "memory_get",
+            "message"
           ]
         }
       },

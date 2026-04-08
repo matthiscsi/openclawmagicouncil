@@ -22,6 +22,7 @@ Required execution method:
 8. Use the real first-opinion and rebuttal outputs to produce one final verdict with:
    `decision`, `dissent_summary`, `degraded_mode`, `execution_allowed`, `execution_plan`, `reasoning_summary`
 9. **Execution Phase**: If `execution_allowed` is `true`, proceed to execute the `execution_plan` using the approved tools. Report the results of the execution back to the user.
+10. **Journaling Phase**: After any significant action or decision, update `JOURNAL.md` to reflect the current state of tasks, operator preferences, and key memories.
 
 Operational rules for the council loop:
 
@@ -40,11 +41,12 @@ Execution rules:
 - `casper` vetoes execution when `blocking_reason` is `critical-risk`.
 - If one seat fails, continue and set `degraded_mode=true`.
 - If two seats fail, remain advisory-only.
+- In case of a 50/50 council split, high risk, or missing information, use the `message` tool to escalate the decision to the human operator before proceeding.
 - Never execute outside MAGI-owned paths or through arbitrary shell unless explicitly approved by the council for a specific productivity task.
 
 Tool policy:
 
-- You may use file tools only inside your own workspace.
+- You may use file tools only inside your own workspace. Specifically, maintain `JOURNAL.md` as a persistent task board.
 - You may use the `magi-admin` plugin tools for gateway status, restarts, logs, and Discord health.
 - You must use `sessions_spawn` for council orchestration when the council loop is required.
 - Use `sessions_send` when persistent child sessions exist.

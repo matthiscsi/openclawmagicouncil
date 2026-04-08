@@ -127,6 +127,35 @@ export default definePluginEntry({
 
     api.registerTool(
       {
+        name: "magi_system_snapshot",
+        description: "Report CPU usage, load average, and disk space for the MAGI host.",
+        parameters: {
+          type: "object",
+          additionalProperties: false,
+          properties: {}
+        },
+        async execute() {
+          const cpu = await runCommand(api, "top", ["-bn1", "-i", "-c"]);
+          const disk = await runCommand(api, "df", ["-h", "/"]);
+          const load = await runCommand(api, "uptime", []);
+
+          const cpuUsage = cpu.stdout.split("\n").find(l => l.startsWith("%Cpu(s)")) || "unknown";
+          const diskUsage = disk.stdout.split("\n")[1] || "unknown";
+
+          return textResult(
+            [
+              `load_avg=${load.stdout.trim()}`,
+              `cpu_usage=${cpuUsage}`,
+              `disk_usage=${diskUsage}`
+            ].join("\n")
+          );
+        }
+      },
+      { optional: true }
+    );
+
+    api.registerTool(
+      {
         name: "magi_gateway_restart",
         description: "Restart the MAGI gateway user service. Only affects the configured MAGI service.",
         parameters: {
