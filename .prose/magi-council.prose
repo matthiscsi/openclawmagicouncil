@@ -1,0 +1,108 @@
+# MAGI Council
+
+input request:
+  description: Original user request for the MAGI council.
+  required: true
+
+input action_mode:
+  description: Use advisory or execute-safe-action.
+  default: advisory
+
+agent melchior:
+  description: Logic, architecture, and policy seat.
+
+agent balthasar:
+  description: Human impact, operator experience, and pragmatic dissent seat.
+
+agent casper:
+  description: Adversarial, blast-radius, and safety veto seat.
+
+agent magi:
+  description: Conductor that synthesizes the council result.
+
+parallel:
+  melchior_first = session: melchior
+    prompt: |
+      Evaluate the request from Melchior's perspective.
+      Return only a JSON object with:
+      stance, confidence, key_points, risks, action_recommendation, blocking_reason.
+    context:
+      request: {request}
+      action_mode: {action_mode}
+
+  balthasar_first = session: balthasar
+    prompt: |
+      Evaluate the request from Balthasar's perspective.
+      Return only a JSON object with:
+      stance, confidence, key_points, risks, action_recommendation, blocking_reason.
+    context:
+      request: {request}
+      action_mode: {action_mode}
+
+  casper_first = session: casper
+    prompt: |
+      Evaluate the request from Casper's perspective.
+      Return only a JSON object with:
+      stance, confidence, key_points, risks, action_recommendation, blocking_reason.
+      Use blocking_reason=critical-risk when a veto is required.
+    context:
+      request: {request}
+      action_mode: {action_mode}
+
+parallel:
+  melchior_rebuttal = session: melchior
+    prompt: |
+      Critique the other council outputs.
+      Challenge weak assumptions, unsupported claims, and hidden tradeoffs.
+      Return only a JSON object with:
+      stance, confidence, key_points, risks, action_recommendation, blocking_reason.
+    context:
+      request: {request}
+      own_view: {melchior_first}
+      balthasar_view: {balthasar_first}
+      casper_view: {casper_first}
+
+  balthasar_rebuttal = session: balthasar
+    prompt: |
+      Critique the other council outputs.
+      Focus on operator burden, user clarity, and recovery if this goes wrong.
+      Return only a JSON object with:
+      stance, confidence, key_points, risks, action_recommendation, blocking_reason.
+    context:
+      request: {request}
+      own_view: {balthasar_first}
+      melchior_view: {melchior_first}
+      casper_view: {casper_first}
+
+  casper_rebuttal = session: casper
+    prompt: |
+      Critique the other council outputs.
+      Focus on unsafe execution, hidden dependencies, and service interference.
+      Return only a JSON object with:
+      stance, confidence, key_points, risks, action_recommendation, blocking_reason.
+    context:
+      request: {request}
+      own_view: {casper_first}
+      melchior_view: {melchior_first}
+      balthasar_view: {balthasar_first}
+
+verdict = session: magi
+  prompt: |
+    Synthesize the MAGI council into a final verdict.
+    Rules:
+    - Advisory answers require at least one usable council output.
+    - Safe execution requires at least two approving seats.
+    - Casper vetoes execution when blocking_reason is critical-risk.
+    - If one seat is unavailable, set degraded_mode=true and continue.
+    - If two seats are unavailable, refuse execution and stay advisory-only.
+    Return one JSON object with:
+    decision, dissent_summary, degraded_mode, execution_allowed, execution_plan, reasoning_summary.
+  context:
+    request: {request}
+    action_mode: {action_mode}
+    melchior_first: {melchior_first}
+    balthasar_first: {balthasar_first}
+    casper_first: {casper_first}
+    melchior_rebuttal: {melchior_rebuttal}
+    balthasar_rebuttal: {balthasar_rebuttal}
+    casper_rebuttal: {casper_rebuttal}

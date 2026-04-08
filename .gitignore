@@ -1,0 +1,6 @@
+.openclaw-magi/
+node_modules/
+plugins/magi-admin/node_modules/
+plugins/magi-admin/package-lock.json
+gateway.env
+*.log

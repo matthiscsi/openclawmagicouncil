@@ -1,0 +1,23 @@
+[Unit]
+Description=OpenClaw MAGI Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.openclaw-magi/gateway.env
+Environment=PATH=%h/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=MAGI_HOME=%h/.openclaw-magi
+Environment=OPENCLAW_CONFIG_PATH=%h/.openclaw-magi/openclaw.json
+Environment=OPENCLAW_STATE_DIR=%h/.openclaw-magi/state
+WorkingDirectory=%h/.openclaw-magi
+ExecStartPre=/usr/bin/mkdir -p %h/.openclaw-magi/logs %h/.openclaw-magi/state
+ExecStartPre=/usr/bin/touch %h/.openclaw-magi/logs/gateway.log
+StandardOutput=append:%h/.openclaw-magi/logs/gateway.log
+StandardError=append:%h/.openclaw-magi/logs/gateway.log
+ExecStart=/usr/bin/env openclaw gateway --port 18790
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,276 @@
+{
+  "env": {
+    "shellEnv": {
+      "enabled": true,
+      "timeoutMs": 15000
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "port": 18790,
+    "controlUi": {
+      "allowedOrigins": [
+        "http://127.0.0.1:18790",
+        "http://localhost:18790",
+        "https://homeserver.tailf7a295.ts.net:18790"
+      ]
+    },
+    "auth": {
+      "mode": "token",
+      "allowTailscale": true,
+      "token": {
+        "source": "env",
+        "provider": "default",
+        "id": "OPENCLAW_GATEWAY_TOKEN"
+      }
+    }
+  },
+  "discovery": {
+    "mdns": {
+      "mode": "off"
+    },
+    "wideArea": {
+      "enabled": false
+    }
+  },
+  "logging": {
+    "level": "info",
+    "file": "${MAGI_HOME}/logs/gateway.log",
+    "consoleLevel": "info",
+    "consoleStyle": "compact",
+    "redactSensitive": "tools"
+  },
+  "commands": {
+    "native": "auto",
+    "text": true,
+    "bash": false,
+    "config": false,
+    "debug": false,
+    "restart": false
+  },
+  "messages": {
+    "groupChat": {
+      "historyLimit": 40
+    }
+  },
+  "plugins": {
+    "enabled": true,
+    "allow": [
+      "open-prose",
+      "magi-admin"
+    ],
+    "entries": {
+      "open-prose": {
+        "enabled": true
+      },
+      "magi-admin": {
+        "enabled": true,
+        "config": {
+          "serviceName": "openclaw-magi.service",
+          "gatewayConfigPath": "${MAGI_HOME}/openclaw.json",
+          "logDir": "${MAGI_HOME}/logs",
+          "allowedRoots": [
+            "${MAGI_HOME}"
+          ],
+          "logFiles": [
+            "gateway.log",
+            "bootstrap.log",
+            "service-install.log"
+          ]
+        }
+      }
+    }
+  },
+  "tools": {
+    "profile": "minimal",
+    "agentToAgent": {
+      "enabled": true,
+      "allow": [
+        "melchior",
+        "balthasar",
+        "casper"
+      ]
+    },
+    "elevated": {
+      "enabled": false
+    },
+    "loopDetection": {
+      "enabled": true,
+      "historySize": 30,
+      "warningThreshold": 8,
+      "criticalThreshold": 14,
+      "globalCircuitBreakerThreshold": 20,
+      "detectors": {
+        "genericRepeat": true,
+        "knownPollNoProgress": true,
+        "pingPong": true
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "skipBootstrap": true,
+      "userTimezone": "Europe/Brussels",
+      "timeFormat": "24",
+      "models": {
+        "openai-codex/gpt-5.4": {
+          "alias": "magi-codex",
+          "params": {
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "model": {
+        "primary": "openai-codex/gpt-5.4"
+      },
+      "thinkingDefault": "low",
+      "verboseDefault": "off",
+      "timeoutSeconds": 240,
+      "contextTokens": 120000,
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 3,
+        "runTimeoutSeconds": 300,
+        "archiveAfterMinutes": 30
+      },
+      "sandbox": {
+        "mode": "all",
+        "backend": "docker",
+        "scope": "agent",
+        "workspaceAccess": "none",
+        "workspaceRoot": "${MAGI_HOME}/sandboxes",
+        "docker": {
+          "image": "openclaw-sandbox:bookworm-slim",
+          "containerPrefix": "openclaw-magi-",
+          "workdir": "/workspace",
+          "readOnlyRoot": true,
+          "tmpfs": [
+            "/tmp",
+            "/var/tmp",
+            "/run"
+          ],
+          "network": "none",
+          "user": "1000:1000",
+          "capDrop": [
+            "ALL"
+          ],
+          "memory": "1g",
+          "memorySwap": "2g",
+          "cpus": 1
+        }
+      }
+    },
+    "list": [
+      {
+        "id": "magi",
+        "default": true,
+        "name": "MAGI",
+        "workspace": "${MAGI_HOME}/workspaces/magi",
+        "agentDir": "${MAGI_HOME}/agents/magi/agent",
+        "model": {
+          "primary": "openai-codex/gpt-5.4"
+        },
+        "thinkingDefault": "low",
+        "groupChat": {
+          "mentionPatterns": [
+            "@magi",
+            "magi"
+          ]
+        },
+        "subagents": {
+          "allowAgents": [
+            "melchior",
+            "balthasar",
+            "casper"
+          ],
+          "requireAgentId": true
+        },
+        "sandbox": {
+          "mode": "all",
+          "scope": "agent",
+          "workspaceAccess": "rw"
+        },
+        "tools": {
+          "alsoAllow": [
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "session_status",
+            "magi-admin"
+          ]
+        }
+      },
+      {
+        "id": "melchior",
+        "name": "Melchior",
+        "workspace": "${MAGI_HOME}/workspaces/melchior",
+        "agentDir": "${MAGI_HOME}/agents/melchior/agent",
+        "model": {
+          "primary": "openai-codex/gpt-5.4"
+        },
+        "thinkingDefault": "low",
+        "sandbox": {
+          "mode": "all",
+          "scope": "agent",
+          "workspaceAccess": "ro"
+        },
+        "tools": {
+          "alsoAllow": [
+            "read",
+            "session_status"
+          ]
+        }
+      },
+      {
+        "id": "balthasar",
+        "name": "Balthasar",
+        "workspace": "${MAGI_HOME}/workspaces/balthasar",
+        "agentDir": "${MAGI_HOME}/agents/balthasar/agent",
+        "model": {
+          "primary": "openai-codex/gpt-5.4"
+        },
+        "thinkingDefault": "low",
+        "sandbox": {
+          "mode": "all",
+          "scope": "agent",
+          "workspaceAccess": "ro"
+        },
+        "tools": {
+          "alsoAllow": [
+            "read",
+            "session_status"
+          ]
+        }
+      },
+      {
+        "id": "casper",
+        "name": "Casper",
+        "workspace": "${MAGI_HOME}/workspaces/casper",
+        "agentDir": "${MAGI_HOME}/agents/casper/agent",
+        "model": {
+          "primary": "openai-codex/gpt-5.4"
+        },
+        "thinkingDefault": "low",
+        "sandbox": {
+          "mode": "all",
+          "scope": "agent",
+          "workspaceAccess": "ro"
+        },
+        "tools": {
+          "alsoAllow": [
+            "read",
+            "session_status"
+          ]
+        }
+      }
+    ]
+  }
+}

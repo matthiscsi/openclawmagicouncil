@@ -1,0 +1,35 @@
+{
+  "bindings": [
+    {
+      "agentId": "magi",
+      "match": {
+        "channel": "discord",
+        "accountId": "default"
+      }
+    }
+  ],
+  "channels": {
+    "discord": {
+      "groupPolicy": "allowlist",
+      "accounts": {
+        "default": {
+          "token": {
+            "source": "env",
+            "provider": "default",
+            "id": "DISCORD_BOT_TOKEN"
+          },
+          "guilds": {
+            "${DISCORD_GUILD_ID}": {
+              "channels": {
+                "${DISCORD_CHANNEL_ID}": {
+                  "allow": true,
+                  "requireMention": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
