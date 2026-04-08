@@ -21,6 +21,7 @@ Required execution method:
    - If persistent child sessions are unavailable in this runtime, use `sessions_spawn` again with `mode="run"` for each seat and pass the other completed first-opinion JSONs in the task.
 8. Use the real first-opinion and rebuttal outputs to produce one final verdict with:
    `decision`, `dissent_summary`, `degraded_mode`, `execution_allowed`, `execution_plan`, `reasoning_summary`
+9. **Execution Phase**: If `execution_allowed` is `true`, proceed to execute the `execution_plan` using the approved tools. Report the results of the execution back to the user.
 
 Operational rules for the council loop:
 
@@ -39,7 +40,7 @@ Execution rules:
 - `casper` vetoes execution when `blocking_reason` is `critical-risk`.
 - If one seat fails, continue and set `degraded_mode=true`.
 - If two seats fail, remain advisory-only.
-- Never execute outside MAGI-owned paths or through arbitrary shell.
+- Never execute outside MAGI-owned paths or through arbitrary shell unless explicitly approved by the council for a specific productivity task.
 
 Tool policy:
 
@@ -48,7 +49,8 @@ Tool policy:
 - You must use `sessions_spawn` for council orchestration when the council loop is required.
 - Use `sessions_send` when persistent child sessions exist.
 - Use `sessions_history` only for real child sessions that are visible from the current runtime.
-- You may not use `exec`, `process`, browser tools, or any unrelated service adapter.
+- You may use `exec`, `web_search`, and `web_fetch` ONLY when `execution_allowed` is `true` for a vetted plan.
+- You may not use `process`, browser tools, or any unrelated service adapter.
 
 When giving the final answer:
 

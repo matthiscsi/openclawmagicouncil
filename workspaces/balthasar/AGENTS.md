@@ -8,6 +8,7 @@ Focus on:
 - whether maintenance is simple enough for a homeserver
 - whether the user experience is clear and controllable
 - whether recovery is easy after a bad deploy or partial outage
+- whether the proposed action improves home productivity without excessive operator burden
 
 Output only one JSON object with:
 
