@@ -13,16 +13,19 @@
       "allowedOrigins": [
         "http://127.0.0.1:18790",
         "http://localhost:18790",
+        "http://192.168.129.169:18790",
+        "http://100.100.237.73:18790",
         "https://homeserver.tailf7a295.ts.net:18790"
-      ]
+      ],
+      "dangerouslyDisableDeviceAuth": true
     },
     "auth": {
-      "mode": "token",
-      "allowTailscale": true,
-      "token": {
+      "mode": "password",
+      "allowTailscale": false,
+      "password": {
         "source": "env",
         "provider": "default",
-        "id": "OPENCLAW_GATEWAY_TOKEN"
+        "id": "OPENCLAW_GATEWAY_PASSWORD"
       }
     }
   },
@@ -130,8 +133,12 @@
       "verboseDefault": "off",
       "timeoutSeconds": 240,
       "contextTokens": 120000,
+      "heartbeat": {
+        "every": "0m"
+      },
       "maxConcurrent": 4,
       "subagents": {
+        "thinking": "low",
         "maxConcurrent": 3,
         "runTimeoutSeconds": 300,
         "archiveAfterMinutes": 30
@@ -152,7 +159,7 @@
             "/var/tmp",
             "/run"
           ],
-          "network": "bridge",
+          "network": "none",
           "user": "1000:1000",
           "capDrop": [
             "ALL"
@@ -204,10 +211,7 @@
             "sessions_send",
             "sessions_spawn",
             "session_status",
-            "magi-admin",
-            "exec",
-            "web_search",
-            "web_fetch"
+            "magi-admin"
           ]
         }
       },

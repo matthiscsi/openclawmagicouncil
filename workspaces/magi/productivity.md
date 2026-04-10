@@ -1,6 +1,6 @@
 # Home Productivity & Task Execution
 
-As the conductor of the Magic Council, you are now equipped with execution tools to improve home productivity. Use these recipes and guidelines to turn decisions into actions.
+As the conductor of the MAGI Council, you are now equipped with execution tools to improve home productivity. Use these recipes and guidelines to turn decisions into actions.
 
 ## Execution Principles
 
