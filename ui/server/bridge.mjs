@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { appendFile, mkdir, readFile, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -24,6 +24,60 @@ const OPENCLAW_CALL_PATH = process.env.MAGI_OPENCLAW_CALL_PATH ?? null;
 const UI_STATE_DIR = path.join(STATE_DIR, "ui");
 const RUN_HISTORY_PATH = path.join(UI_STATE_DIR, "run-history.jsonl");
 
+function readGatewayPasswordFromEnvFile() {
+  const gatewayEnvPath = path.join(MAGI_HOME, "gateway.env");
+
+  if (!existsSync(gatewayEnvPath)) {
+    return "";
+  }
+
+  try {
+    const raw = readFileSync(gatewayEnvPath, "utf8");
+
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue;
+      }
+
+      const separatorIndex = trimmed.indexOf("=");
+
+      if (separatorIndex < 1) {
+        continue;
+      }
+
+      const key = trimmed.slice(0, separatorIndex).trim();
+      const value = trimmed.slice(separatorIndex + 1).trim();
+
+      if (key === "OPENCLAW_GATEWAY_PASSWORD" || key === "OPENCLAW_GATEWAY_TOKEN") {
+        return value;
+      }
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+const AUTOLOGIN_ENABLED = (process.env.MAGI_UI_AUTOLOGIN ?? "true").toLowerCase() !== "false";
+const DEFAULT_GATEWAY_PASSWORD = (
+  process.env.MAGI_UI_BRIDGE_PASSWORD
+  ?? process.env.OPENCLAW_GATEWAY_PASSWORD
+  ?? process.env.OPENCLAW_GATEWAY_TOKEN
+  ?? readGatewayPasswordFromEnvFile()
+  ?? ""
+).trim();
+
+if (!process.env.OPENCLAW_GATEWAY_PASSWORD && DEFAULT_GATEWAY_PASSWORD) {
+  process.env.OPENCLAW_GATEWAY_PASSWORD = DEFAULT_GATEWAY_PASSWORD;
+}
+
+if (!process.env.OPENCLAW_GATEWAY_TOKEN && DEFAULT_GATEWAY_PASSWORD) {
+  process.env.OPENCLAW_GATEWAY_TOKEN = DEFAULT_GATEWAY_PASSWORD;
+}
+
 const SESSION_COOKIE_NAME = "magi_bridge_sid";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const DEFAULT_MAGI_SESSION_KEY = "agent:magi:main";
@@ -32,7 +86,7 @@ const DEFAULT_RUNTIME_OPTIONS = {
   councilMode: "auto",
   reasoningEffort: "auto",
   responseStyle: "balanced",
-  executionPolicy: "advisory",
+  executionPolicy: "allowlisted",
   highStakesMode: "normal",
 };
 const SPAWN_TIMEOUT_GRACE_MS = 120000;
@@ -64,6 +118,7 @@ const ALLOWED_DEV_ORIGINS = new Set([
 
 const authSessions = new Map();
 const runs = new Map();
+let autoLoginPasswordValid = false;
 
 let gatewayCallerPromise;
 
@@ -255,6 +310,41 @@ async function verifyGatewayPassword(password) {
   } catch {
     return false;
   }
+}
+
+async function establishAuthSession(response, password) {
+  const sessionId = crypto.randomUUID();
+  const session = {
+    password,
+    createdAt: now(),
+  };
+  authSessions.set(sessionId, session);
+  setAuthCookie(response, sessionId);
+  return session;
+}
+
+async function ensureBridgeAuthSession(request, response) {
+  const existing = getAuthSession(request);
+
+  if (existing) {
+    return existing;
+  }
+
+  if (!AUTOLOGIN_ENABLED || !DEFAULT_GATEWAY_PASSWORD) {
+    return null;
+  }
+
+  if (!autoLoginPasswordValid) {
+    const ok = await verifyGatewayPassword(DEFAULT_GATEWAY_PASSWORD);
+
+    if (!ok) {
+      return null;
+    }
+
+    autoLoginPasswordValid = true;
+  }
+
+  return establishAuthSession(response, DEFAULT_GATEWAY_PASSWORD);
 }
 
 async function readJsonFile(filePath, fallback) {
@@ -1204,7 +1294,8 @@ async function handleApiRequest(request, response, pathname) {
   if (request.method === "POST" && pathname === "/api/auth/login") {
     try {
       const body = await readBody(request);
-      const password = typeof body.password === "string" ? body.password.trim() : "";
+      const providedPassword = typeof body.password === "string" ? body.password.trim() : "";
+      const password = providedPassword || DEFAULT_GATEWAY_PASSWORD;
       const ok = await verifyGatewayPassword(password);
 
       if (!ok) {
@@ -1215,12 +1306,7 @@ async function handleApiRequest(request, response, pathname) {
         return;
       }
 
-      const sessionId = crypto.randomUUID();
-      authSessions.set(sessionId, {
-        password,
-        createdAt: now(),
-      });
-      setAuthCookie(response, sessionId);
+      await establishAuthSession(response, password);
       sendJson(request, response, 200, {
         ok: true,
         authenticated: true,
@@ -1251,7 +1337,7 @@ async function handleApiRequest(request, response, pathname) {
   }
 
   if (request.method === "GET" && pathname === "/api/auth/session") {
-    const session = getAuthSession(request);
+    const session = await ensureBridgeAuthSession(request, response);
 
     if (!session) {
       sendJson(request, response, 200, {
@@ -1266,7 +1352,7 @@ async function handleApiRequest(request, response, pathname) {
     return;
   }
 
-  const authSession = getAuthSession(request);
+  const authSession = await ensureBridgeAuthSession(request, response);
 
   if (!authSession) {
     sendJson(request, response, 401, {

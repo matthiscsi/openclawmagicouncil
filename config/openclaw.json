@@ -47,10 +47,10 @@
   "commands": {
     "native": "auto",
     "text": true,
-    "bash": false,
-    "config": false,
-    "debug": false,
-    "restart": false
+    "bash": true,
+    "config": true,
+    "debug": true,
+    "restart": true
   },
   "messages": {
     "groupChat": {
@@ -96,7 +96,7 @@
       ]
     },
     "elevated": {
-      "enabled": false
+      "enabled": true
     },
     "loopDetection": {
       "enabled": true,
@@ -153,20 +153,20 @@
           "image": "openclaw-sandbox:bookworm-slim",
           "containerPrefix": "openclaw-magi-",
           "workdir": "/workspace",
-          "readOnlyRoot": true,
+          "readOnlyRoot": false,
           "tmpfs": [
             "/tmp",
             "/var/tmp",
             "/run"
           ],
-          "network": "none",
+          "network": "bridge",
           "user": "1000:1000",
           "capDrop": [
             "ALL"
           ],
-          "memory": "1g",
-          "memorySwap": "2g",
-          "cpus": 1
+          "memory": "2g",
+          "memorySwap": "4g",
+          "cpus": 2
         }
       }
     },
@@ -206,6 +206,10 @@
             "write",
             "edit",
             "apply_patch",
+            "exec",
+            "process",
+            "web_search",
+            "web_fetch",
             "sessions_list",
             "sessions_history",
             "sessions_send",
@@ -235,7 +239,9 @@
         "tools": {
           "alsoAllow": [
             "read",
-            "session_status"
+            "session_status",
+            "web_search",
+            "web_fetch"
           ]
         }
       },
@@ -259,7 +265,9 @@
         "tools": {
           "alsoAllow": [
             "read",
-            "session_status"
+            "session_status",
+            "web_search",
+            "web_fetch"
           ]
         }
       },
@@ -283,7 +291,9 @@
         "tools": {
           "alsoAllow": [
             "read",
-            "session_status"
+            "session_status",
+            "web_search",
+            "web_fetch"
           ]
         }
       }

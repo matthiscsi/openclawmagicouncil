@@ -23,9 +23,10 @@ The seats stay role-distinct through isolated workspaces, prompts, and different
 - Local MAGI UI: `http://127.0.0.1:18790/`
 - Tailnet MAGI UI: `https://homeserver.tailf7a295.ts.net:18790/`
 - Auth model: shared gateway password, OpenClaw device pairing disabled
+- Bridge login UX: auto-session fallback enabled (bridge reads gateway password from env/env-file when needed)
 - Exposure model: MAGI stays tailnet-only; it is not published on Tailscale Funnel
 - Cost posture: heartbeat disabled, low default reasoning, low default subagent thinking, tiered council depth (`quick` / `standard` / `critical`)
-- Safety posture: sandbox network stays `none`; MAGI is back to the tighter v1-style boundary instead of broad execution/network access
+- Execution posture: conductor seat now has expanded allowlisted execution (`exec`, `process`, `web_search`, `web_fetch`) with Docker sandbox network enabled for real task execution
 
 Related host/service details now live in `workspaces/magi/SERVER.md`.
 Runtime architecture details now live in `docs/runtime-architecture.md`.

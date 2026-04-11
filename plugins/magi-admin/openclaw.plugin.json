@@ -38,11 +38,6 @@
         }
       }
     },
-    "required": [
-      "serviceName",
-      "gatewayConfigPath",
-      "logDir",
-      "allowedRoots"
-    ]
+    "required": []
   }
 }

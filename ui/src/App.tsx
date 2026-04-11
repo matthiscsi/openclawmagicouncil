@@ -47,7 +47,7 @@ const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   councilMode: "auto",
   reasoningEffort: "auto",
   responseStyle: "balanced",
-  executionPolicy: "advisory",
+  executionPolicy: "allowlisted",
   highStakesMode: "normal",
 };
 
