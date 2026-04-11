@@ -3,12 +3,14 @@ import type {
   ExecutionPolicy,
   ReasoningEffort,
   ResponseStyle,
+  BridgeDiagnostics,
   RuntimeSettings,
 } from "../types";
 
 type SettingsDrawerProps = {
   open: boolean;
   settings: RuntimeSettings;
+  diagnostics: BridgeDiagnostics | null;
   extensionCode: string;
   phaseLabel: string;
   syncLabel: string;
@@ -91,6 +93,7 @@ const EXECUTION_POLICY_OPTIONS: OptionButtonGroupProps<ExecutionPolicy>["options
 export function SettingsDrawer({
   open,
   settings,
+  diagnostics,
   extensionCode,
   phaseLabel,
   syncLabel,
@@ -134,6 +137,17 @@ export function SettingsDrawer({
           </div>
         </div>
 
+        <details className="drawer-section drawer-details">
+          <summary>Diagnostics</summary>
+          <div className="drawer-readout">
+            <span>{`BRIDGE:${diagnostics ? "ONLINE" : "UNKNOWN"}`}</span>
+            <span>{`GATEWAY:${diagnostics?.gatewayReachable ? "REACHABLE" : "UNREACHABLE"}`}</span>
+            <span>{`MELCHIOR:${diagnostics?.seatStatus.melchior.status ?? "UNKNOWN"}`}</span>
+            <span>{`BALTHASAR:${diagnostics?.seatStatus.balthasar.status ?? "UNKNOWN"}`}</span>
+            <span>{`CASPER:${diagnostics?.seatStatus.casper.status ?? "UNKNOWN"}`}</span>
+          </div>
+        </details>
+
         <div className="drawer-section">
           <p className="drawer-copy">
             These controls are applied per question through the live MAGI bridge. They do not touch
@@ -174,6 +188,7 @@ export function SettingsDrawer({
             options={EXECUTION_POLICY_OPTIONS}
             onChange={(value) => onSettingsChange("executionPolicy", value)}
           />
+
         </div>
 
         <div className="drawer-section drawer-actions">

@@ -2,22 +2,30 @@ type QueryInputPanelProps = {
   value: string;
   promptState: string;
   busy: boolean;
+  highStakesEnabled: boolean;
   systemMessage: string | null;
   verdictText: string;
+  canOpenVerdict: boolean;
   onChange: (value: string) => void;
   onSubmit: () => void;
   onClear: () => void;
+  onOpenVerdict: () => void;
+  onToggleHighStakes: () => void;
 };
 
 export function QueryInputPanel({
   value,
   promptState,
   busy,
+  highStakesEnabled,
   systemMessage,
   verdictText,
+  canOpenVerdict,
   onChange,
   onSubmit,
   onClear,
+  onOpenVerdict,
+  onToggleHighStakes,
 }: QueryInputPanelProps) {
   return (
     <section className="query-panel">
@@ -26,7 +34,18 @@ export function QueryInputPanel({
           <p className="panel-label">QUESTION ENTRY</p>
           <h2>Commit To MAGI</h2>
         </div>
-        <div className={busy ? "state-chip busy" : "state-chip"}>{busy ? "PROCESSING" : "READY"}</div>
+        <div className="query-header-actions">
+          <button
+            type="button"
+            className={highStakesEnabled ? "high-stakes-toggle active" : "high-stakes-toggle"}
+            onClick={onToggleHighStakes}
+            disabled={busy}
+          >
+            <span>HIGH-STAKES</span>
+            <span className="state">{highStakesEnabled ? "STRICT MODE" : "NORMAL MODE"}</span>
+          </button>
+          <div className={busy ? "state-chip busy" : "state-chip"}>{busy ? "PROCESSING" : "READY"}</div>
+        </div>
       </div>
 
       <label htmlFor="question" className="sr-only">
@@ -46,10 +65,16 @@ export function QueryInputPanel({
 
       {systemMessage ? <p className="query-alert">{systemMessage}</p> : null}
       {verdictText ? (
-        <div className="query-verdict">
+        <button
+          type="button"
+          className={canOpenVerdict ? "query-verdict clickable" : "query-verdict"}
+          onClick={canOpenVerdict ? onOpenVerdict : undefined}
+          disabled={!canOpenVerdict}
+          aria-label={canOpenVerdict ? "Open full council summary" : "Waiting for full council summary"}
+        >
           <span className="panel-label">LATEST VERDICT</span>
           <p>{verdictText}</p>
-        </div>
+        </button>
       ) : null}
 
       <div className="query-panel-footer">

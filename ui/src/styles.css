@@ -183,6 +183,12 @@ textarea:disabled {
   gap: 12px;
 }
 
+.query-header-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
 .panel-label {
   margin: 0 0 6px;
   color: #c69344;
@@ -212,6 +218,44 @@ textarea:disabled {
 .state-chip.busy {
   background: rgba(164, 20, 19, 0.18);
   border-color: rgba(164, 20, 19, 0.52);
+}
+
+.high-stakes-toggle {
+  border: 1px solid rgba(255, 141, 0, 0.52);
+  background: linear-gradient(180deg, rgba(52, 28, 8, 0.95), rgba(24, 12, 3, 0.95));
+  color: #f5cf94;
+  padding: 7px 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.67rem;
+  display: inline-grid;
+  gap: 3px;
+  justify-items: center;
+  min-width: 165px;
+  box-shadow: inset 0 0 0 1px rgba(255, 141, 0, 0.2);
+}
+
+.high-stakes-toggle.active {
+  border-color: rgba(255, 94, 94, 0.9);
+  background: linear-gradient(180deg, rgba(94, 15, 15, 0.92), rgba(42, 8, 8, 0.94));
+  color: #ffd1c8;
+  box-shadow: 0 0 0 1px rgba(255, 94, 94, 0.36), 0 0 18px rgba(120, 16, 16, 0.24);
+}
+
+.high-stakes-toggle:hover,
+.high-stakes-toggle:focus-visible {
+  border-color: rgba(255, 186, 88, 0.9);
+  outline: none;
+}
+
+.high-stakes-toggle > .state {
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  color: #c69344;
+}
+
+.high-stakes-toggle.active > .state {
+  color: #ffaf9f;
 }
 
 .query-panel textarea {
@@ -247,9 +291,24 @@ textarea:disabled {
 }
 
 .query-verdict {
+  width: 100%;
+  text-align: left;
   border: 1px solid rgba(255, 141, 0, 0.28);
   background: #090909;
+  color: #d3a75c;
   padding: 10px 12px;
+}
+
+.query-verdict.clickable:hover,
+.query-verdict.clickable:focus-visible {
+  border-color: rgba(255, 186, 88, 0.7);
+  background: #120b04;
+  outline: none;
+}
+
+.query-verdict:disabled {
+  cursor: default;
+  opacity: 0.92;
 }
 
 .query-verdict .panel-label {
@@ -305,6 +364,31 @@ textarea:disabled {
 
 .settings-toggle.active {
   background: #261300;
+}
+
+.history-toggle {
+  position: absolute;
+  top: 14px;
+  right: 132px;
+  z-index: 7;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: #0d0d0d;
+  border: 2px solid rgba(255, 141, 0, 0.82);
+  color: #f4c98a;
+  padding: 10px 14px;
+}
+
+.history-toggle.active {
+  background: #2b1706;
+  border-color: #ffba58;
+  color: #ffd8a1;
+}
+
+.history-toggle:hover,
+.history-toggle:focus-visible {
+  border-color: #ffba58;
+  outline: none;
 }
 
 .council-panel {
@@ -560,6 +644,25 @@ textarea:disabled {
   transform: translateX(0);
 }
 
+.history-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(430px, 100%);
+  height: 100%;
+  background: #040404;
+  border-left: 2px solid #ff8d00;
+  transform: translateX(100%);
+  transition: transform 160ms ease;
+  z-index: 6;
+  padding: 68px 16px 16px;
+  overflow-y: auto;
+}
+
+.history-drawer.open {
+  transform: translateX(0);
+}
+
 .drawer-header {
   display: flex;
   align-items: flex-start;
@@ -603,6 +706,14 @@ textarea:disabled {
 
 .drawer-section summary::-webkit-details-marker {
   display: none;
+}
+
+.drawer-details > summary {
+  color: #f0bd75;
+}
+
+.drawer-details[open] > summary {
+  margin-bottom: 10px;
 }
 
 .settings-grid {
@@ -665,6 +776,62 @@ textarea:disabled {
   background: linear-gradient(180deg, rgba(255, 141, 0, 0.18), rgba(255, 141, 0, 0.08));
   border-color: #ff8d00;
   box-shadow: inset 0 0 0 1px rgba(255, 141, 0, 0.28);
+}
+
+.history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.history-item {
+  border: 1px solid rgba(255, 141, 0, 0.28);
+  background: #080808;
+  padding: 9px 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.history-question {
+  margin: 0;
+  color: #f7c786;
+  font-size: 0.88rem;
+}
+
+.history-meta {
+  margin: 0;
+  color: #c69344;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+}
+
+.history-decision {
+  margin: 0;
+  color: #d5aa66;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.history-action-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.history-action {
+  border: 1px solid rgba(255, 141, 0, 0.42);
+  background: #0f0a04;
+  color: #edbe76;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  padding: 6px 10px;
+}
+
+.history-action:hover,
+.history-action:focus-visible {
+  border-color: #ffba58;
+  background: #1a1107;
+  outline: none;
 }
 
 .test-matrix {
@@ -912,11 +1079,20 @@ textarea:disabled {
     right: 10px;
   }
 
+  .history-toggle {
+    top: 10px;
+    right: 128px;
+  }
+
   .query-actions {
     flex-direction: column;
   }
 
   .settings-drawer {
+    width: 100%;
+  }
+
+  .history-drawer {
     width: 100%;
   }
 }

@@ -1,4 +1,9 @@
-import type { CouncilRunSnapshot, RuntimeSettings } from "./types";
+import type {
+  BridgeDiagnostics,
+  CouncilHistoryEntry,
+  CouncilRunSnapshot,
+  RuntimeSettings,
+} from "./types";
 
 type SessionStatus = {
   authenticated: boolean;
@@ -66,4 +71,19 @@ export async function fetchCouncilRun(runId: string) {
   return requestJson<CouncilRunSnapshot>(`/api/council/runs/${encodeURIComponent(runId)}`, {
     method: "GET",
   });
+}
+
+export async function fetchDiagnostics() {
+  return requestJson<BridgeDiagnostics>("/api/diagnostics", {
+    method: "GET",
+  });
+}
+
+export async function fetchCouncilHistory(limit = 20) {
+  return requestJson<{ entries: CouncilHistoryEntry[] }>(
+    `/api/council/history?limit=${encodeURIComponent(String(limit))}`,
+    {
+      method: "GET",
+    },
+  );
 }

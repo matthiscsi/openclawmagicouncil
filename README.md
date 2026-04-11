@@ -28,6 +28,8 @@ The seats stay role-distinct through isolated workspaces, prompts, and different
 - Safety posture: sandbox network stays `none`; MAGI is back to the tighter v1-style boundary instead of broad execution/network access
 
 Related host/service details now live in `workspaces/magi/SERVER.md`.
+Runtime architecture details now live in `docs/runtime-architecture.md`.
+Identity/config baseline details now live in `docs/council-identity-and-config.md`.
 
 ## What Is Included
 
@@ -175,13 +177,13 @@ A separate MAGI-themed frontend is planned as a parallel UI on its own port rath
 
 The reference inspiration is [TomaszRewak/MAGI](https://github.com/TomaszRewak/MAGI), but the plan is to keep OpenClaw as the runtime and only replace the presentation layer.
 
-### Current UI Prototype
+### Current UI
 
-The first frontend shell now exists in `ui/` as a standalone React + Vite app.
+The MAGI frontend in `ui/` is now a live control surface backed by `magi-ui-bridge.service`.
 
-- It is currently a visual prototype with mock council data, not a live bridge into OpenClaw session events yet.
-- It already includes the intended operator-facing structure: verdict-first layout, visible seat identities, seat drill-down, and a `quick` / `standard` / `critical` depth selector.
-- The default dev server target is port `18810`.
+- Local URL: `http://127.0.0.1:18811/`
+- Tailnet URL: `https://homeserver.tailf7a295.ts.net:18811/`
+- Live features: seat state resolution, verdict inspection modal, runtime controls, diagnostics, and persisted run history
 
 Run it locally with:
 

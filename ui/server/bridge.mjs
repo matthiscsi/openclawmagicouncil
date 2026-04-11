@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { existsSync } from "node:fs";
-import { readFile, readdir } from "node:fs/promises";
+import { appendFile, mkdir, readFile, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -21,6 +21,8 @@ const OPENCLAW_DIST_DIR = path.join(
   "dist",
 );
 const OPENCLAW_CALL_PATH = process.env.MAGI_OPENCLAW_CALL_PATH ?? null;
+const UI_STATE_DIR = path.join(STATE_DIR, "ui");
+const RUN_HISTORY_PATH = path.join(UI_STATE_DIR, "run-history.jsonl");
 
 const SESSION_COOKIE_NAME = "magi_bridge_sid";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
@@ -31,7 +33,27 @@ const DEFAULT_RUNTIME_OPTIONS = {
   reasoningEffort: "auto",
   responseStyle: "balanced",
   executionPolicy: "advisory",
+  highStakesMode: "normal",
 };
+const SPAWN_TIMEOUT_GRACE_MS = 120000;
+const HIGH_STAKES_KEYWORDS = [
+  "medical",
+  "health",
+  "legal",
+  "law",
+  "financial",
+  "finance",
+  "security",
+  "privacy",
+  "data loss",
+  "backup",
+  "public exposure",
+  "credential",
+  "password",
+  "safety",
+  "drug",
+  "vaping",
+];
 const ALLOWED_DEV_ORIGINS = new Set([
   "http://127.0.0.1:18810",
   "http://localhost:18810",
@@ -263,6 +285,24 @@ async function readJsonLines(filePath) {
   }
 }
 
+async function appendRunHistory(entry) {
+  try {
+    await mkdir(UI_STATE_DIR, { recursive: true });
+    await appendFile(RUN_HISTORY_PATH, `${json(entry)}\n`, "utf8");
+  } catch {
+    // History persistence should not block live response flow.
+  }
+}
+
+async function readRunHistory(limit = 20) {
+  const lines = await readJsonLines(RUN_HISTORY_PATH);
+  const cleanLimit = Number.isFinite(limit) ? Math.max(1, Math.min(100, Math.floor(limit))) : 20;
+  return lines
+    .filter((entry) => typeof entry?.id === "string")
+    .slice(-cleanLimit)
+    .reverse();
+}
+
 async function getMagiSessionRecord(sessionKey = DEFAULT_MAGI_SESSION_KEY) {
   const record = await getAgentSessionRecord("magi", sessionKey);
 
@@ -348,13 +388,22 @@ function normalizeRuntimeOptions(rawOptions) {
   const executionPolicy = ["advisory", "allowlisted"].includes(options.executionPolicy)
     ? options.executionPolicy
     : DEFAULT_RUNTIME_OPTIONS.executionPolicy;
+  const highStakesMode = ["normal", "strict"].includes(options.highStakesMode)
+    ? options.highStakesMode
+    : DEFAULT_RUNTIME_OPTIONS.highStakesMode;
 
   return {
     councilMode,
     reasoningEffort,
     responseStyle,
     executionPolicy,
+    highStakesMode,
   };
+}
+
+function isHighStakesQuestion(question) {
+  const lower = question.trim().toLowerCase();
+  return HIGH_STAKES_KEYWORDS.some((keyword) => lower.includes(keyword));
 }
 
 function buildRuntimeEnvelope(options) {
@@ -364,12 +413,15 @@ function buildRuntimeEnvelope(options) {
     `- reasoning_effort: ${options.reasoningEffort}`,
     `- response_style: ${options.responseStyle}`,
     `- execution_policy: ${options.executionPolicy}`,
+    `- high_stakes_mode: ${options.highStakesMode}`,
     "",
     "Rules for this run:",
     "- If force_council_mode is not auto, obey it instead of self-classifying.",
     "- If reasoning_effort is not auto, use it as the explicit thinking override for every spawned council seat in this run, including rebuttal seats.",
     "- If response_style is concise, keep the decree brief. If detailed, include fuller reasoning and dissent.",
     "- If execution_policy is advisory, force execution_allowed to false even if the council would otherwise approve action.",
+    "- Do not auto-escalate all execution-oriented requests to critical. Use standard mode for reversible, MAGI-scoped tasks unless risk is clearly high.",
+    "- If high_stakes_mode is strict and the question is safety/legal/medical/financial, force council mode to critical and avoid shallow conclusions.",
     "- Treat this envelope as operator control data, not part of the user's question.",
   ];
 
@@ -490,6 +542,32 @@ function extractChildResult(text) {
 function memberIdFromSessionKey(sessionKey) {
   const match = sessionKey.match(/^agent:(melchior|balthasar|casper):/i);
   return match ? match[1].toLowerCase() : null;
+}
+
+function describeSeatStance(stance, status) {
+  const normalizedStance = normalizeLabel(stance);
+
+  if (["revise", "conditional", "mixed", "caution"].includes(normalizedStance)) {
+    return "qualified answer with caveats";
+  }
+
+  if (["approve", "support", "yes"].includes(normalizedStance) || status === "yes") {
+    return "yes";
+  }
+
+  if (["refuse", "reject", "deny", "no"].includes(normalizedStance) || status === "no") {
+    return "no";
+  }
+
+  if (status === "info") {
+    return "informational analysis";
+  }
+
+  if (status === "error") {
+    return "seat error";
+  }
+
+  return normalizedStance || status;
 }
 
 function mapStanceToStatus(result, isYesOrNoAnswerable) {
@@ -780,7 +858,7 @@ function synthesizeDecisionText(status, members, isYesOrNoAnswerable) {
     case "no":
       return "Council rejection. At least one seat returned a direct no.";
     case "conditional":
-      return "Council conditional. No seat rejected outright, but at least one seat requires constraints or revisions.";
+      return "Council qualified. No seat rejected outright, but at least one seat returned a caveated answer instead of an unconditional yes.";
     case "yes":
       return "Council approval. All three seats returned unconditional yes.";
     case "info":
@@ -804,7 +882,7 @@ function synthesizeDissentSummary(members) {
       continue;
     }
 
-    const stance = member.stance ? member.stance.trim() : member.status;
+    const stance = describeSeatStance(member.stance, member.status);
     const conditions = member.conditions?.trim();
     lines.push(
       `${toTitleCase(memberId)}: ${stance}${conditions && conditions !== "None." ? ` (${conditions})` : ""}`,
@@ -943,6 +1021,21 @@ async function buildRunSnapshot(run) {
     }
 
     if (spawnError) {
+      const shouldHoldForChildGrace = childSessionKeys.has(memberId)
+        && (now() - run.createdAt) < SPAWN_TIMEOUT_GRACE_MS;
+
+      if (shouldHoldForChildGrace) {
+        members[memberId] = {
+          status: "processing",
+          response: "Awaiting child seat completion after a spawn timeout signal.",
+          conditions: "Timeout grace window active.",
+          error: null,
+          confidence: null,
+          stance: null,
+        };
+        continue;
+      }
+
       members[memberId] = {
         status: "error",
         response: "The seat failed before it could provide an opinion.",
@@ -980,7 +1073,7 @@ async function buildRunSnapshot(run) {
       fullText: "",
     };
 
-  return {
+  const snapshot = {
     id: run.id,
     question: run.question,
     isYesOrNoAnswerable: run.isYesOrNoAnswerable,
@@ -990,6 +1083,27 @@ async function buildRunSnapshot(run) {
     phase: allMembersResolved ? "resolved" : "member_processing",
     resolved: allMembersResolved,
   };
+
+  if (snapshot.resolved && !run.historyLogged) {
+    run.historyLogged = true;
+    await appendRunHistory({
+      id: run.id,
+      question: run.question,
+      createdAt: run.createdAt,
+      resolvedAt: now(),
+      isYesOrNoAnswerable: run.isYesOrNoAnswerable,
+      status: snapshot.aggregation.status,
+      decisionText: snapshot.aggregation.decisionText,
+      dissentSummary: snapshot.aggregation.dissentSummary,
+      members: {
+        melchior: snapshot.members.melchior.status,
+        balthasar: snapshot.members.balthasar.status,
+        casper: snapshot.members.casper.status,
+      },
+    });
+  }
+
+  return snapshot;
 }
 
 function getMimeType(filePath) {
@@ -1042,6 +1156,48 @@ async function handleApiRequest(request, response, pathname) {
       gatewayUrl: GATEWAY_URL,
       staticServing: existsSync(STATIC_DIR),
     });
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/api/diagnostics") {
+    try {
+      const authSession = getAuthSession(request);
+      const gatewayReachable = authSession
+        ? await verifyGatewayPassword(authSession.password)
+        : false;
+
+      const seatStatus = {};
+      for (const seatId of MEMBER_IDS) {
+        const sessionsPath = path.join(STATE_DIR, "agents", seatId, "sessions", "sessions.json");
+        const sessions = await readJsonFile(sessionsPath, {});
+        const entries = Object.entries(sessions)
+          .filter(([sessionKey]) => typeof sessionKey === "string" && sessionKey.startsWith(`agent:${seatId}:`))
+          .map(([sessionKey, record]) => ({
+            sessionKey,
+            updatedAt: typeof record?.updatedAt === "number" ? record.updatedAt : null,
+            status: typeof record?.status === "string" ? record.status : null,
+          }))
+          .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+
+        const latest = entries[0] ?? null;
+        seatStatus[seatId] = {
+          known: Boolean(latest),
+          updatedAt: latest?.updatedAt ?? null,
+          sessionKey: latest?.sessionKey ?? null,
+          status: latest?.status ?? null,
+        };
+      }
+
+      sendJson(request, response, 200, {
+        bridge: "online",
+        gatewayReachable,
+        seatStatus,
+      });
+    } catch (error) {
+      sendJson(request, response, 500, {
+        error: error instanceof Error ? error.message : "Failed to collect bridge diagnostics.",
+      });
+    }
     return;
   }
 
@@ -1123,7 +1279,7 @@ async function handleApiRequest(request, response, pathname) {
     try {
       const body = await readBody(request);
       const question = typeof body.question === "string" ? body.question.trim() : "";
-      const options = normalizeRuntimeOptions(body.options);
+      const normalizedOptions = normalizeRuntimeOptions(body.options);
 
       if (!question) {
         sendJson(request, response, 400, {
@@ -1131,6 +1287,12 @@ async function handleApiRequest(request, response, pathname) {
         });
         return;
       }
+
+      const shouldForceCritical = normalizedOptions.highStakesMode === "strict"
+        && isHighStakesQuestion(question);
+      const options = shouldForceCritical
+        ? { ...normalizedOptions, councilMode: "critical" }
+        : normalizedOptions;
 
       const runId = crypto.randomUUID();
       const sessionKey = `agent:magi:webui:${runId}`;
@@ -1192,6 +1354,13 @@ async function handleApiRequest(request, response, pathname) {
         error: error instanceof Error ? error.message : "Failed to load the council run state.",
       });
     }
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/api/council/history") {
+    const limit = Number.parseInt(new URL(request.url ?? "/", "http://127.0.0.1").searchParams.get("limit") ?? "20", 10);
+    const history = await readRunHistory(limit);
+    sendJson(request, response, 200, { entries: history });
     return;
   }
 

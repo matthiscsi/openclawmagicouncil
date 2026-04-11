@@ -7,10 +7,19 @@ import {
   useState,
 } from "react";
 import type { FormEvent } from "react";
-import { evaluateCouncilQuestion, fetchCouncilRun, fetchSessionStatus, loginToBridge, logoutFromBridge } from "./api";
+import {
+  evaluateCouncilQuestion,
+  fetchCouncilHistory,
+  fetchCouncilRun,
+  fetchDiagnostics,
+  fetchSessionStatus,
+  loginToBridge,
+  logoutFromBridge,
+} from "./api";
 import { CouncilDisplay } from "./components/CouncilDisplay";
 import { InspectionModal } from "./components/InspectionModal";
 import { CouncilSummaryModal } from "./components/CouncilSummaryModal";
+import { HistoryDrawer } from "./components/HistoryDrawer";
 import { QueryInputPanel } from "./components/QueryInputPanel";
 import { SettingsDrawer } from "./components/SettingsDrawer";
 import { MEMBERS } from "./constants";
@@ -27,6 +36,8 @@ import type {
   MemberDisplayStatus,
   MemberId,
   MockMemberResponse,
+  BridgeDiagnostics,
+  CouncilHistoryEntry,
   RuntimeSettings,
 } from "./types";
 
@@ -37,6 +48,7 @@ const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   reasoningEffort: "auto",
   responseStyle: "balanced",
   executionPolicy: "advisory",
+  highStakesMode: "normal",
 };
 
 function isResolvedStatus(status: MemberDisplayStatus): status is FinalCouncilStatus {
@@ -69,6 +81,11 @@ function App() {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [verdictOpen, setVerdictOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<BridgeDiagnostics | null>(null);
+  const [historyEntries, setHistoryEntries] = useState<CouncilHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [state, dispatch] = useReducer(councilReducer, undefined, createInitialCouncilState);
 
   const deferredQuestion = useDeferredValue(draftQuestion);
@@ -127,6 +144,7 @@ function App() {
         reasoningEffort: parsed.reasoningEffort ?? DEFAULT_RUNTIME_SETTINGS.reasoningEffort,
         responseStyle: parsed.responseStyle ?? DEFAULT_RUNTIME_SETTINGS.responseStyle,
         executionPolicy: parsed.executionPolicy ?? DEFAULT_RUNTIME_SETTINGS.executionPolicy,
+        highStakesMode: parsed.highStakesMode ?? DEFAULT_RUNTIME_SETTINGS.highStakesMode,
       });
     } catch {
       // Ignore malformed local settings and stay on defaults.
@@ -136,6 +154,78 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(runtimeSettings));
   }, [runtimeSettings]);
+
+  useEffect(() => {
+    if (authenticated !== true || !settingsOpen) {
+      return;
+    }
+
+    let cancelled = false;
+    let timerId: number | undefined;
+
+    const pollDiagnostics = async () => {
+      try {
+        const next = await fetchDiagnostics();
+        if (!cancelled) {
+          setDiagnostics(next);
+        }
+      } catch {
+        if (!cancelled) {
+          setDiagnostics(null);
+        }
+      } finally {
+        if (!cancelled) {
+          timerId = window.setTimeout(pollDiagnostics, 5000);
+        }
+      }
+    };
+
+    void pollDiagnostics();
+
+    return () => {
+      cancelled = true;
+      if (timerId) {
+        window.clearTimeout(timerId);
+      }
+    };
+  }, [authenticated, settingsOpen]);
+
+  useEffect(() => {
+    if (authenticated !== true || !historyOpen) {
+      setHistoryEntries([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadHistory = async () => {
+      try {
+        if (!cancelled) {
+          setHistoryLoading(true);
+          setHistoryError(null);
+        }
+        const payload = await fetchCouncilHistory(20);
+        if (!cancelled) {
+          setHistoryEntries(payload.entries);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setHistoryEntries([]);
+          setHistoryError(error instanceof Error ? error.message : "Failed to load run history.");
+        }
+      } finally {
+        if (!cancelled) {
+          setHistoryLoading(false);
+        }
+      }
+    };
+
+    void loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, historyOpen, state.aggregation.answerId]);
 
   const syncSnapshot = useEffectEvent((snapshot: CouncilRunSnapshot) => {
     if (state.isYesOrNoAnswerable !== snapshot.isYesOrNoAnswerable) {
@@ -274,10 +364,15 @@ function App() {
       setAuthenticated(false);
       setPassword("");
       setSettingsOpen(false);
+      setHistoryOpen(false);
       setVerdictOpen(false);
       setAuthError(null);
       setRuntimeError(null);
       setActiveRunId(null);
+      setDiagnostics(null);
+      setHistoryEntries([]);
+      setHistoryLoading(false);
+      setHistoryError(null);
     });
   };
 
@@ -323,6 +418,15 @@ function App() {
   const responsePending = submitting || createAggregationPreview(state.aggregation);
   const phaseLabel = getPhaseLabel(state.phase);
   const syncLabel = getSyncLabel(state);
+  const canOpenVerdict = (
+    state.aggregation.status !== "neutral"
+    && state.aggregation.status !== "processing"
+    && Boolean(
+      state.aggregation.fullText
+      || state.aggregation.decisionText
+      || state.aggregation.dissentSummary
+    )
+  );
 
   const handleSettingsChange = <K extends keyof RuntimeSettings>(key: K, value: RuntimeSettings[K]) => {
     setRuntimeSettings((current) => ({
@@ -375,11 +479,20 @@ function App() {
             value={draftQuestion}
             promptState={promptState}
             busy={responsePending}
+            highStakesEnabled={runtimeSettings.highStakesMode === "strict"}
             systemMessage={runtimeError}
             verdictText={state.aggregation.decisionText}
+            canOpenVerdict={canOpenVerdict}
             onChange={setDraftQuestion}
             onSubmit={() => void submitQuestion(draftQuestion)}
             onClear={() => setDraftQuestion("")}
+            onOpenVerdict={() => setVerdictOpen(true)}
+            onToggleHighStakes={() =>
+              setRuntimeSettings((current) => ({
+                ...current,
+                highStakesMode: current.highStakesMode === "strict" ? "normal" : "strict",
+              }))
+            }
           />
 
           <CouncilDisplay
@@ -396,6 +509,7 @@ function App() {
         <SettingsDrawer
           open={settingsOpen}
           settings={runtimeSettings}
+          diagnostics={diagnostics}
           extensionCode={state.extensionCode}
           phaseLabel={phaseLabel}
           syncLabel={syncLabel}
@@ -403,8 +517,26 @@ function App() {
           runtimeError={runtimeError}
           onSettingsChange={handleSettingsChange}
           onResetSettings={() => setRuntimeSettings(DEFAULT_RUNTIME_SETTINGS)}
-          onClose={() => setSettingsOpen((value) => !value)}
+          onClose={() => {
+            setSettingsOpen((value) => !value);
+            setHistoryOpen(false);
+          }}
           onLogout={() => void handleLogout()}
+        />
+
+        <HistoryDrawer
+          open={historyOpen}
+          loading={historyLoading}
+          error={historyError}
+          entries={historyEntries}
+          onClose={() => {
+            setHistoryOpen((value) => !value);
+            setSettingsOpen(false);
+          }}
+          onReuseQuestion={(question) => {
+            setDraftQuestion(question);
+            setHistoryOpen(false);
+          }}
         />
 
         <InspectionModal

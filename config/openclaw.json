@@ -224,6 +224,9 @@
           "primary": "openai-codex/gpt-5.4"
         },
         "thinkingDefault": "low",
+        "heartbeat": {
+          "every": "0m"
+        },
         "sandbox": {
           "mode": "all",
           "scope": "agent",
@@ -245,6 +248,9 @@
           "primary": "openai-codex/gpt-5.4"
         },
         "thinkingDefault": "low",
+        "heartbeat": {
+          "every": "0m"
+        },
         "sandbox": {
           "mode": "all",
           "scope": "agent",
@@ -266,6 +272,9 @@
           "primary": "openai-codex/gpt-5.4"
         },
         "thinkingDefault": "low",
+        "heartbeat": {
+          "every": "0m"
+        },
         "sandbox": {
           "mode": "all",
           "scope": "agent",

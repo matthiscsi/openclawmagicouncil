@@ -7,3 +7,6 @@ plugins/magi-admin/package-lock.json
 gateway.env
 .reference-magi-ui/
 *.log
+ui/*.tsbuildinfo
+ui/vite.config.js
+ui/vite.config.d.ts

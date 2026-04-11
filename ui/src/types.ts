@@ -8,11 +8,40 @@ export type ResponseStyle = "concise" | "balanced" | "detailed";
 
 export type ExecutionPolicy = "advisory" | "allowlisted";
 
+export type HighStakesMode = "normal" | "strict";
+
 export type RuntimeSettings = {
   councilMode: CouncilMode;
   reasoningEffort: ReasoningEffort;
   responseStyle: ResponseStyle;
   executionPolicy: ExecutionPolicy;
+  highStakesMode: HighStakesMode;
+};
+
+export type BridgeDiagnostics = {
+  bridge: "online";
+  gatewayReachable: boolean;
+  seatStatus: Record<
+    MemberId,
+    {
+      known: boolean;
+      updatedAt: number | null;
+      sessionKey: string | null;
+      status: string | null;
+    }
+  >;
+};
+
+export type CouncilHistoryEntry = {
+  id: string;
+  question: string;
+  createdAt: number;
+  resolvedAt: number;
+  isYesOrNoAnswerable: boolean;
+  status: CouncilDisplayStatus;
+  decisionText: string;
+  dissentSummary: string;
+  members: Record<MemberId, string>;
 };
 
 export type FinalCouncilStatus = "yes" | "no" | "conditional" | "info" | "error";

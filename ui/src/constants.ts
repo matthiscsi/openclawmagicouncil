@@ -47,7 +47,7 @@ export const STATUS_ENGLISH_LABELS: Record<FinalCouncilStatus, string> = {
   info: "INFO",
   yes: "YES",
   no: "NO",
-  conditional: "CONDITIONAL",
+  conditional: "QUALIFIED",
   error: "ERROR",
 };
 

@@ -14,6 +14,32 @@ type CouncilSummaryModalProps = {
   onClose: () => void;
 };
 
+function toSeatStanceLabel(stance: string | null, status: MemberDecisionState["status"]) {
+  const normalized = (stance ?? "").trim().toLowerCase();
+
+  if (["revise", "conditional", "mixed", "caution"].includes(normalized)) {
+    return "qualified answer with caveats";
+  }
+
+  if (["approve", "support", "yes"].includes(normalized) || status === "yes") {
+    return "yes";
+  }
+
+  if (["refuse", "reject", "deny", "no"].includes(normalized) || status === "no") {
+    return "no";
+  }
+
+  if (status === "info") {
+    return "informational analysis";
+  }
+
+  if (status === "error") {
+    return "seat error";
+  }
+
+  return normalized || status;
+}
+
 export function CouncilSummaryModal({
   open,
   question,
@@ -43,6 +69,11 @@ export function CouncilSummaryModal({
         <div className="modal-body verdict-body">
           <div>question:</div>
           <div>{question || "Waiting for query..."}</div>
+          <div>confidence guide:</div>
+          <div>
+            QUALIFIED means the council leans toward an answer but includes caveats, uncertainty,
+            or safety constraints.
+          </div>
           <div>verdict status:</div>
           <div>{resolvedStatus ? STATUS_ENGLISH_LABELS[resolvedStatus] : "PROCESSING"}</div>
           <div>decision:</div>
@@ -51,17 +82,17 @@ export function CouncilSummaryModal({
           <div>{aggregation.dissentSummary || "Pending."}</div>
           <div>melchior:</div>
           <div>
-            {members.melchior.stance ?? members.melchior.status}
+            {toSeatStanceLabel(members.melchior.stance, members.melchior.status)}
             {members.melchior.confidence !== null ? ` (${members.melchior.confidence.toFixed(2)})` : ""}
           </div>
           <div>balthasar:</div>
           <div>
-            {members.balthasar.stance ?? members.balthasar.status}
+            {toSeatStanceLabel(members.balthasar.stance, members.balthasar.status)}
             {members.balthasar.confidence !== null ? ` (${members.balthasar.confidence.toFixed(2)})` : ""}
           </div>
           <div>casper:</div>
           <div>
-            {members.casper.stance ?? members.casper.status}
+            {toSeatStanceLabel(members.casper.stance, members.casper.status)}
             {members.casper.confidence !== null ? ` (${members.casper.confidence.toFixed(2)})` : ""}
           </div>
           <div>full decree:</div>
