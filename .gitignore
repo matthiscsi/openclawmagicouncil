@@ -1,6 +1,9 @@
 .openclaw-magi/
 node_modules/
+dist/
+ui/dist/
 plugins/magi-admin/node_modules/
 plugins/magi-admin/package-lock.json
 gateway.env
+.reference-magi-ui/
 *.log

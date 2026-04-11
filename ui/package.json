@@ -1,0 +1,24 @@
+{
+  "name": "magi-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 18810",
+    "bridge": "node server/bridge.mjs",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 18810",
+    "serve:live": "MAGI_UI_BRIDGE_PORT=18810 node server/bridge.mjs"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}

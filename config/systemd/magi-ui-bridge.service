@@ -1,0 +1,25 @@
+[Unit]
+Description=MAGI Custom UI Bridge
+After=network-online.target openclaw-magi.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.openclaw-magi/gateway.env
+Environment=PATH=%h/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=MAGI_HOME=%h/.openclaw-magi
+Environment=OPENCLAW_CONFIG_PATH=%h/.openclaw-magi/openclaw.json
+Environment=OPENCLAW_STATE_DIR=%h/.openclaw-magi/state
+Environment=MAGI_UI_BRIDGE_PORT=18811
+Environment=MAGI_UI_STATIC_DIR=%h/.openclaw-magi/ui/dist
+WorkingDirectory=%h/.openclaw-magi/ui
+ExecStartPre=/usr/bin/mkdir -p %h/.openclaw-magi/logs
+ExecStartPre=/usr/bin/touch %h/.openclaw-magi/logs/ui-bridge.log
+StandardOutput=append:%h/.openclaw-magi/logs/ui-bridge.log
+StandardError=append:%h/.openclaw-magi/logs/ui-bridge.log
+ExecStart=/usr/bin/node server/bridge.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

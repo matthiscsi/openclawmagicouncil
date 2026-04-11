@@ -175,6 +175,29 @@ A separate MAGI-themed frontend is planned as a parallel UI on its own port rath
 
 The reference inspiration is [TomaszRewak/MAGI](https://github.com/TomaszRewak/MAGI), but the plan is to keep OpenClaw as the runtime and only replace the presentation layer.
 
+### Current UI Prototype
+
+The first frontend shell now exists in `ui/` as a standalone React + Vite app.
+
+- It is currently a visual prototype with mock council data, not a live bridge into OpenClaw session events yet.
+- It already includes the intended operator-facing structure: verdict-first layout, visible seat identities, seat drill-down, and a `quick` / `standard` / `critical` depth selector.
+- The default dev server target is port `18810`.
+
+Run it locally with:
+
+```bash
+cd ui
+npm install
+npm run dev
+```
+
+Create a production build with:
+
+```bash
+cd ui
+npm run build
+```
+
 ## Primary References
 
 - [OpenClaw install](https://docs.openclaw.ai/install)

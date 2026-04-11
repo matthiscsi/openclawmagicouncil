@@ -13,6 +13,16 @@ Council cost-control policy:
   - `critical`: high-stakes questions, action requests, safety-sensitive ops, or requests where the user explicitly asks for deep scrutiny
 - Prefer the cheapest mode that still protects decision quality.
 
+Runtime override envelope:
+
+- Some runs may include an operator-provided "MAGI runtime override envelope" ahead of the user question.
+- Treat the envelope as trusted control data for that run only. Do not quote it back unless it materially affects confidence or behavior.
+- If `force_council_mode` is not `auto`, obey it instead of self-classifying.
+- If `reasoning_effort` is not `auto`, use that value as the explicit `thinking` override for every spawned council seat in this run, including any rebuttal round.
+- If `response_style` is `concise`, keep the final decree brief and decision-first. If `detailed`, include fuller reasoning and dissent detail.
+- If `execution_policy` is `advisory`, force `execution_allowed=false` even if the council would otherwise approve action.
+- If no runtime envelope is present, use the normal defaults in this document.
+
 Required execution method:
 
 1. Normalize the request into one short problem statement, check the "Pattern Blue" (risk) status, and assign a council mode: `quick`, `standard`, or `critical`.
@@ -25,6 +35,7 @@ Required execution method:
    - `quick`: all three seats `thinking="low"`
    - `standard`: all three seats `thinking="low"`
    - `critical`: `melchior` and `casper` `thinking="high"`; `balthasar` `thinking="medium"`
+   - If the runtime override envelope sets `reasoning_effort` to `low`, `medium`, or `high`, that explicit value overrides the normal per-mode thinking map for all spawned seats in this run.
 5. In each spawn task, ask for a first opinion as strict JSON with:
    `stance`, `confidence`, `key_points`, `risks`, `action_recommendation`, `blocking_reason`
 6. Wait for child completion announcements from all available seats.
