@@ -2,6 +2,7 @@ import type {
   BridgeDiagnostics,
   CouncilHistoryEntry,
   CouncilRunSnapshot,
+  RunRoute,
   RuntimeSettings,
 } from "./types";
 
@@ -13,6 +14,8 @@ type EvaluationResponse = {
   id: string;
   question: string;
   isYesOrNoAnswerable: boolean;
+  route?: RunRoute;
+  routeReason?: string;
 };
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {

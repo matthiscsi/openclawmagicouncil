@@ -1,7 +1,10 @@
+import type { RunRoute } from "../types";
+
 type QueryInputPanelProps = {
   value: string;
   promptState: string;
   busy: boolean;
+  route: RunRoute;
   highStakesEnabled: boolean;
   systemMessage: string | null;
   verdictText: string;
@@ -17,6 +20,7 @@ export function QueryInputPanel({
   value,
   promptState,
   busy,
+  route,
   highStakesEnabled,
   systemMessage,
   verdictText,
@@ -27,6 +31,14 @@ export function QueryInputPanel({
   onOpenVerdict,
   onToggleHighStakes,
 }: QueryInputPanelProps) {
+  const summaryPreview = verdictText.replace(/\s+/g, " ").trim();
+  const dossierLabel = route === "assistant-first"
+    ? "OPEN ASSISTANT DOSSIER"
+    : "OPEN COUNCIL DOSSIER";
+  const outputLabel = route === "assistant-first"
+    ? "ASSISTANT OUTPUT"
+    : "COUNCIL OUTPUT";
+
   return (
     <section className="query-panel">
       <div className="query-panel-header">
@@ -41,8 +53,8 @@ export function QueryInputPanel({
             onClick={onToggleHighStakes}
             disabled={busy}
           >
-            <span>HIGH-STAKES</span>
-            <span className="state">{highStakesEnabled ? "STRICT MODE" : "NORMAL MODE"}</span>
+            <span>MAGI COUNCIL</span>
+            <span className="state">{highStakesEnabled ? "ENABLED" : "OFF (ASSISTANT)"}</span>
           </button>
           <div className={busy ? "state-chip busy" : "state-chip"}>{busy ? "PROCESSING" : "READY"}</div>
         </div>
@@ -55,26 +67,30 @@ export function QueryInputPanel({
         id="question"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="State the question clearly. MAGI will classify it, route it through MELCHIOR, BALTHASAR, and CASPER, then lock the final verdict."
+        placeholder="Ask anything. With MAGI Council OFF, MAGI answers directly as your personal AI. Turn MAGI Council ON for strict 3-seat adjudication."
         disabled={busy}
       />
 
       <p className="query-hint">
-        Ask one clear decision question at a time, or a non-yes/no question if you want an informational council response.
+        Default is assistant-first. Enable MAGI Council only when you want full governance and seat-level dissent.
       </p>
 
       {systemMessage ? <p className="query-alert">{systemMessage}</p> : null}
       {verdictText ? (
-        <button
-          type="button"
-          className={canOpenVerdict ? "query-verdict clickable" : "query-verdict"}
-          onClick={canOpenVerdict ? onOpenVerdict : undefined}
-          disabled={!canOpenVerdict}
-          aria-label={canOpenVerdict ? "Open full council summary" : "Waiting for full council summary"}
-        >
-          <span className="panel-label">LATEST VERDICT</span>
-          <p>{verdictText}</p>
-        </button>
+        <section className="query-result-strip">
+          <div className="query-result-copy">
+            <span className="panel-label">{outputLabel}</span>
+            <p>{summaryPreview}</p>
+          </div>
+          <button
+            type="button"
+            className="query-result-open"
+            onClick={canOpenVerdict ? onOpenVerdict : undefined}
+            disabled={!canOpenVerdict}
+          >
+            {dossierLabel}
+          </button>
+        </section>
       ) : null}
 
       <div className="query-panel-footer">

@@ -74,18 +74,18 @@ export function councilReducer(
       };
     }
 
-    case "MEMBER_RESOLVED": {
+    case "MEMBER_SYNCED": {
       const nextMembers = {
         ...state.members,
         [event.memberId]: {
           ...state.members[event.memberId],
           answerId: state.runId,
-          status: event.response.status,
-          response: event.response.response,
-          conditions: event.response.conditions,
-          error: event.response.error,
-          confidence: event.response.confidence ?? null,
-          stance: event.response.stance ?? null,
+          status: event.status,
+          response: event.response,
+          conditions: event.conditions,
+          error: event.error,
+          confidence: event.confidence ?? null,
+          stance: event.stance ?? null,
         },
       };
 
@@ -101,6 +101,7 @@ export function councilReducer(
         ...state,
         aggregation: {
           ...state.aggregation,
+          status: event.status,
           decisionText: event.decisionText,
           dissentSummary: event.dissentSummary,
           fullText: event.fullText,
@@ -109,6 +110,16 @@ export function councilReducer(
     }
 
     case "AGGREGATION_RESOLVED": {
+      const currentStatus = state.aggregation.status;
+      const resolvedStatus = (
+        currentStatus !== "neutral" && currentStatus !== "processing"
+      )
+        ? currentStatus
+        : aggregateCouncilStatus(
+          nextMemberStatuses(state.members),
+          state.isYesOrNoAnswerable,
+        );
+
       return {
         ...state,
         phase: "resolved",
@@ -116,10 +127,7 @@ export function councilReducer(
           ...state.aggregation,
           questionId: state.runId,
           answerId: state.runId,
-          status: aggregateCouncilStatus(
-            nextMemberStatuses(state.members),
-            state.isYesOrNoAnswerable,
-          ),
+          status: resolvedStatus,
         },
       };
     }

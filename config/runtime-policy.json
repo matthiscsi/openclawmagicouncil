@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "routing": {
+    "assistantFirstEnabled": true,
+    "repoReviewDirectTimeoutMs": 90000,
+    "directTimeoutMs": 20000,
+    "retryTimeoutMs": 90000
+  },
+  "timeouts": {
+    "gatewaySubmitMs": 45000,
+    "spawnTimeoutGraceMs": 120000,
+    "finalizationNudgeGraceMs": 30000,
+    "runHardTimeoutMs": 120000,
+    "runInfoTimeoutMs": 35000,
+    "runStallNudgeMs": 45000,
+    "runInfoStallNudgeMs": 15000
+  },
+  "history": {
+    "schemaVersion": 2,
+    "maxEntries": 300,
+    "maxBytes": 1500000
+  },
+  "lists": {
+    "highStakesKeywords": [
+      "medical",
+      "health",
+      "legal",
+      "law",
+      "financial",
+      "finance",
+      "security",
+      "privacy",
+      "data loss",
+      "backup",
+      "public exposure",
+      "credential",
+      "password",
+      "safety",
+      "drug",
+      "vaping"
+    ],
+    "infoMetaPhrases": [
+      "public weather source",
+      "bounded lookup",
+      "cannot be stated yet",
+      "no direct weather data",
+      "should perform",
+      "cannot verify",
+      "request is coherent",
+      "correct dependency",
+      "not derivable from local context",
+      "subagent run",
+      "lookup should",
+      "should use a source",
+      "give me a bit more detail",
+      "desired output format",
+      "i can help with that directly"
+    ]
+  }
+}

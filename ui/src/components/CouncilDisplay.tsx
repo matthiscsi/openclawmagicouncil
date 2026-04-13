@@ -1,10 +1,11 @@
 import { CouncilMemberPanel } from "./CouncilMemberPanel";
 import { CouncilResponse } from "./CouncilResponse";
 import { SystemStatus } from "./SystemStatus";
-import type { CouncilMachineState, MemberId } from "../types";
+import type { CouncilMachineState, MemberId, RunRoute } from "../types";
 
 type CouncilDisplayProps = {
   state: CouncilMachineState;
+  route: RunRoute;
   phaseLabel: string;
   syncLabel: string;
   onInspect: (memberId: MemberId) => void;
@@ -13,6 +14,7 @@ type CouncilDisplayProps = {
 
 export function CouncilDisplay({
   state,
+  route,
   phaseLabel,
   syncLabel,
   onInspect,
@@ -47,7 +49,7 @@ export function CouncilDisplay({
         <CouncilMemberPanel member={state.members.balthasar} onInspect={onInspect} />
         <CouncilMemberPanel member={state.members.casper} onInspect={onInspect} />
 
-        <CouncilResponse aggregation={state.aggregation} onInspectVerdict={onInspectVerdict} />
+        <CouncilResponse route={route} aggregation={state.aggregation} onInspectVerdict={onInspectVerdict} />
 
         <div className="connection casper-balthasar" />
         <div className="connection casper-melchior" />

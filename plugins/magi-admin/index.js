@@ -1,5 +1,7 @@
 import fs from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import path from "node:path";
+import readline from "node:readline";
 
 import { definePluginEntry } from "openclaw/plugin-sdk/core";
 
@@ -80,11 +82,52 @@ async function runCommand(api, command, args) {
   return { stdout, stderr, exitCode };
 }
 
+let configCache = {
+  filePath: "",
+  loadedAt: 0,
+  value: null,
+};
+
 async function readGatewayConfig(api) {
   const cfg = getPluginCfg(api);
   const filePath = ensureInsideAllowedRoots(cfg.gatewayConfigPath, cfg.allowedRoots);
+  const now = Date.now();
+
+  if (
+    configCache.value
+    && configCache.filePath === filePath
+    && now - configCache.loadedAt < 3000
+  ) {
+    return configCache.value;
+  }
+
   const raw = await fs.readFile(filePath, "utf8");
-  return JSON.parse(raw);
+  const parsed = JSON.parse(raw);
+  configCache = {
+    filePath,
+    loadedAt: now,
+    value: parsed,
+  };
+
+  return parsed;
+}
+
+async function tailFileLines(filePath, maxLines = 80) {
+  const buffer = [];
+  const stream = createReadStream(filePath, { encoding: "utf8" });
+  const rl = readline.createInterface({
+    input: stream,
+    crlfDelay: Infinity,
+  });
+
+  for await (const line of rl) {
+    buffer.push(line);
+    if (buffer.length > maxLines) {
+      buffer.shift();
+    }
+  }
+
+  return buffer.join("\n");
 }
 
 export default definePluginEntry({
@@ -210,9 +253,7 @@ export default definePluginEntry({
           }
 
           const logPath = ensureInsideAllowedRoots(path.join(pluginCfg.logDir, logName), pluginCfg.allowedRoots);
-          const raw = await fs.readFile(logPath, "utf8");
-          const lines = raw.split(/\r?\n/);
-          const tail = lines.slice(-Number(params.lines ?? 80)).join("\n");
+          const tail = await tailFileLines(logPath, Number(params.lines ?? 80));
 
           return textResult(truncate(tail, 6000));
         }
@@ -239,8 +280,8 @@ export default definePluginEntry({
 
           try {
             const logPath = ensureInsideAllowedRoots(path.join(pluginCfg.logDir, "gateway.log"), pluginCfg.allowedRoots);
-            const raw = await fs.readFile(logPath, "utf8");
-            const recent = raw
+            const tail = await tailFileLines(logPath, 600);
+            const recent = tail
               .split(/\r?\n/)
               .filter((line) => /discord/i.test(line))
               .slice(-20)

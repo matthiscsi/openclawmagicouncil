@@ -6,7 +6,7 @@ input request:
 
 input action_mode:
   description: Use advisory or execute-safe-action.
-  default: advisory
+  default: execute-safe-action
 
 agent melchior:
   description: Logic, architecture, and policy seat.

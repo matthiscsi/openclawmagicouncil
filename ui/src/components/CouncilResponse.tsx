@@ -4,14 +4,15 @@ import {
   STATUS_ENGLISH_LABELS,
   STATUS_JAPANESE_LABELS,
 } from "../constants";
-import type { CouncilAggregationState, FinalCouncilStatus } from "../types";
+import type { CouncilAggregationState, FinalCouncilStatus, RunRoute } from "../types";
 
 type CouncilResponseProps = {
+  route: RunRoute;
   aggregation: CouncilAggregationState;
   onInspectVerdict: () => void;
 };
 
-export function CouncilResponse({ aggregation, onInspectVerdict }: CouncilResponseProps) {
+export function CouncilResponse({ route, aggregation, onInspectVerdict }: CouncilResponseProps) {
   const processing = aggregation.questionId !== aggregation.answerId;
   const isResolved =
     aggregation.status !== "neutral" && aggregation.status !== "processing";
@@ -19,7 +20,9 @@ export function CouncilResponse({ aggregation, onInspectVerdict }: CouncilRespon
     ? (aggregation.status as FinalCouncilStatus)
     : null;
   const text = resolvedStatus ? STATUS_JAPANESE_LABELS[resolvedStatus] : PROCESSING_LABEL;
-  const caption = resolvedStatus ? STATUS_ENGLISH_LABELS[resolvedStatus] : "SYNC";
+  const caption = resolvedStatus
+    ? (route === "assistant-first" ? "ASSISTANT" : STATUS_ENGLISH_LABELS[resolvedStatus])
+    : "SYNC";
   const color = resolvedStatus ? RESPONSE_BORDER_COLORS[resolvedStatus] : "#ff8d00";
   const clickable = Boolean(
     resolvedStatus && (aggregation.fullText || aggregation.decisionText || aggregation.dissentSummary),
@@ -28,7 +31,7 @@ export function CouncilResponse({ aggregation, onInspectVerdict }: CouncilRespon
   return (
     <button
       type="button"
-      className={`${processing ? "response flicker" : "response"} ${resolvedStatus ? "resolved" : ""} ${clickable ? "clickable" : ""}`}
+      className={`${processing ? "response flicker" : "response"} ${resolvedStatus ? "resolved" : ""} ${clickable ? "clickable" : ""} ${route === "assistant-first" ? "assistant" : "council"}`}
       style={{ color, borderColor: color }}
       onClick={clickable ? onInspectVerdict : undefined}
       disabled={!clickable}

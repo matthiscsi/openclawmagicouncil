@@ -61,17 +61,19 @@
     "enabled": true,
     "allow": [
       "open-prose",
-      "magi-admin"
+      "magi-admin",
+      "openai",
+      "memory-core"
     ],
     "entries": {
       "open-prose": {
         "enabled": true
       },
-      "magi-admin": {
-        "enabled": true,
-        "config": {
-          "serviceName": "openclaw-magi.service",
-          "gatewayConfigPath": "${MAGI_HOME}/openclaw.json",
+        "magi-admin": {
+          "enabled": true,
+          "config": {
+            "serviceName": "openclaw-magi.service",
+            "gatewayConfigPath": "${MAGI_HOME}/openclaw.json",
           "logDir": "${MAGI_HOME}/logs",
           "allowedRoots": [
             "${MAGI_HOME}"
@@ -82,6 +84,9 @@
             "service-install.log"
           ]
         }
+      },
+      "openai": {
+        "enabled": true
       }
     }
   },
@@ -196,9 +201,7 @@
           "requireAgentId": true
         },
         "sandbox": {
-          "mode": "all",
-          "scope": "agent",
-          "workspaceAccess": "rw"
+          "mode": "off"
         },
         "tools": {
           "alsoAllow": [

@@ -6,6 +6,8 @@ export type ReasoningEffort = "auto" | "low" | "medium" | "high";
 
 export type ResponseStyle = "concise" | "balanced" | "detailed";
 
+export type RunRoute = "assistant-first" | "council";
+
 export type ExecutionPolicy = "advisory" | "allowlisted";
 
 export type HighStakesMode = "normal" | "strict";
@@ -37,6 +39,11 @@ export type CouncilHistoryEntry = {
   question: string;
   createdAt: number;
   resolvedAt: number;
+  schemaVersion?: number;
+  route?: RunRoute;
+  routeReason?: string;
+  councilExecuted?: boolean;
+  outcomeCode?: string;
   isYesOrNoAnswerable: boolean;
   status: CouncilDisplayStatus;
   decisionText: string;
@@ -138,6 +145,26 @@ export type CouncilRunSnapshot = {
   question: string;
   isYesOrNoAnswerable: boolean;
   sessionId: string | null;
+  route?: RunRoute;
+  routeReason?: string;
+  councilExecuted?: boolean;
+  outcomeCode?: string;
+  assistantResult?: {
+    summary: string;
+    details: string;
+    source: string;
+  } | null;
+  seatResults?: Partial<Record<
+    MemberId,
+    {
+      status: MemberDisplayStatus;
+      response: string;
+      conditions: string;
+      error: string | null;
+      confidence: number | null;
+      stance: string | null;
+    }
+  >>;
   members: Record<
     MemberId,
     {
@@ -169,12 +196,18 @@ export type CouncilEvent =
       isYesOrNoAnswerable: boolean;
     }
   | {
-      type: "MEMBER_RESOLVED";
+      type: "MEMBER_SYNCED";
       memberId: MemberId;
-      response: MockMemberResponse;
+      status: MemberDisplayStatus;
+      response: string;
+      conditions: string;
+      error: string | null;
+      confidence: number | null;
+      stance: string | null;
     }
   | {
       type: "AGGREGATION_DETAILS_UPDATED";
+      status: CouncilDisplayStatus;
       decisionText: string;
       dissentSummary: string;
       fullText: string;

@@ -32,12 +32,10 @@ import {
 } from "./stateMachine";
 import type {
   CouncilRunSnapshot,
-  FinalCouncilStatus,
-  MemberDisplayStatus,
   MemberId,
-  MockMemberResponse,
   BridgeDiagnostics,
   CouncilHistoryEntry,
+  RunRoute,
   RuntimeSettings,
 } from "./types";
 
@@ -51,22 +49,23 @@ const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   highStakesMode: "normal",
 };
 
-function isResolvedStatus(status: MemberDisplayStatus): status is FinalCouncilStatus {
-  return status !== "neutral" && status !== "processing";
-}
+function resolveOpenClawUrl() {
+  if (typeof window === "undefined") {
+    return "http://127.0.0.1:18790/";
+  }
 
-function toMemberResolution(snapshot: CouncilRunSnapshot, memberId: MemberId): MockMemberResponse {
-  const member = snapshot.members[memberId];
+  const { hostname, protocol } = window.location;
 
-  return {
-    status: isResolvedStatus(member.status) ? member.status : "error",
-    response: member.response,
-    conditions: member.conditions,
-    error: member.error,
-    confidence: member.confidence,
-    stance: member.stance,
-    delayMs: 0,
-  };
+  if (hostname === "127.0.0.1" || hostname === "localhost") {
+    return "http://127.0.0.1:18790/";
+  }
+
+  if (hostname.endsWith(".ts.net")) {
+    const scheme = protocol === "https:" ? "https" : "http";
+    return `${scheme}://${hostname}:18790/`;
+  }
+
+  return `http://${hostname}:18790/`;
 }
 
 function App() {
@@ -86,6 +85,15 @@ function App() {
   const [historyEntries, setHistoryEntries] = useState<CouncilHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [lastRunRoute, setLastRunRoute] = useState<RunRoute>("council");
+  const [runRouteReason, setRunRouteReason] = useState("");
+  const [runOutcomeCode, setRunOutcomeCode] = useState("processing");
+  const [runCouncilExecuted, setRunCouncilExecuted] = useState(false);
+  const [runAssistantResult, setRunAssistantResult] = useState<{
+    summary: string;
+    details: string;
+    source: string;
+  } | null>(null);
   const [state, dispatch] = useReducer(councilReducer, undefined, createInitialCouncilState);
 
   const deferredQuestion = useDeferredValue(draftQuestion);
@@ -228,6 +236,12 @@ function App() {
   }, [authenticated, historyOpen, state.aggregation.answerId]);
 
   const syncSnapshot = useEffectEvent((snapshot: CouncilRunSnapshot) => {
+    setLastRunRoute(snapshot.route ?? "council");
+    setRunRouteReason(snapshot.routeReason ?? "");
+    setRunOutcomeCode(snapshot.outcomeCode ?? (snapshot.resolved ? "resolved" : "processing"));
+    setRunCouncilExecuted(Boolean(snapshot.councilExecuted));
+    setRunAssistantResult(snapshot.assistantResult ?? null);
+
     if (state.isYesOrNoAnswerable !== snapshot.isYesOrNoAnswerable) {
       dispatch({
         type: "QUESTION_CLASSIFIED",
@@ -238,38 +252,37 @@ function App() {
     for (const member of MEMBERS) {
       const nextMember = snapshot.members[member.id];
       const currentMember = state.members[member.id];
-      const nextFinal = isResolvedStatus(nextMember.status);
-      const currentFinal = isResolvedStatus(currentMember.status);
 
       if (
-        nextFinal
-        && (
-          !currentFinal
-          || currentMember.response !== nextMember.response
-          || currentMember.conditions !== nextMember.conditions
-          || currentMember.error !== nextMember.error
-          || currentMember.stance !== nextMember.stance
-          || currentMember.confidence !== nextMember.confidence
-        )
+        currentMember.status !== nextMember.status
+        || currentMember.response !== nextMember.response
+        || currentMember.conditions !== nextMember.conditions
+        || currentMember.error !== nextMember.error
+        || currentMember.stance !== nextMember.stance
+        || currentMember.confidence !== nextMember.confidence
       ) {
         dispatch({
-          type: "MEMBER_RESOLVED",
+          type: "MEMBER_SYNCED",
           memberId: member.id,
-          response: toMemberResolution(snapshot, member.id),
+          status: nextMember.status,
+          response: nextMember.response,
+          conditions: nextMember.conditions,
+          error: nextMember.error,
+          confidence: nextMember.confidence,
+          stance: nextMember.stance,
         });
       }
     }
 
     if (
-      snapshot.aggregation.fullText
-      && (
-        state.aggregation.fullText !== snapshot.aggregation.fullText
-        || state.aggregation.decisionText !== snapshot.aggregation.decisionText
-        || state.aggregation.dissentSummary !== snapshot.aggregation.dissentSummary
-      )
+      state.aggregation.status !== snapshot.aggregation.status
+      || state.aggregation.fullText !== snapshot.aggregation.fullText
+      || state.aggregation.decisionText !== snapshot.aggregation.decisionText
+      || state.aggregation.dissentSummary !== snapshot.aggregation.dissentSummary
     ) {
       dispatch({
         type: "AGGREGATION_DETAILS_UPDATED",
+        status: snapshot.aggregation.status,
         decisionText: snapshot.aggregation.decisionText,
         dissentSummary: snapshot.aggregation.dissentSummary,
         fullText: snapshot.aggregation.fullText,
@@ -373,6 +386,11 @@ function App() {
       setHistoryEntries([]);
       setHistoryLoading(false);
       setHistoryError(null);
+      setLastRunRoute("council");
+      setRunRouteReason("");
+      setRunOutcomeCode("processing");
+      setRunCouncilExecuted(false);
+      setRunAssistantResult(null);
     });
   };
 
@@ -392,10 +410,17 @@ function App() {
         question: trimmed,
       });
       setVerdictOpen(false);
+      setLastRunRoute("council");
+      setRunRouteReason("");
+      setRunOutcomeCode("processing");
+      setRunCouncilExecuted(false);
+      setRunAssistantResult(null);
     });
 
     try {
       const run = await evaluateCouncilQuestion(trimmed, runtimeSettings);
+      setLastRunRoute(run.route ?? "council");
+      setRunRouteReason(run.routeReason ?? "");
 
       dispatch({
         type: "QUESTION_CLASSIFIED",
@@ -427,6 +452,12 @@ function App() {
       || state.aggregation.dissentSummary
     )
   );
+  const openclawUrl = resolveOpenClawUrl();
+  const systemClassName = [
+    "system",
+    settingsOpen ? "settings-open" : "",
+    lastRunRoute === "assistant-first" ? "assistant-route" : "council-route",
+  ].filter(Boolean).join(" ");
 
   const handleSettingsChange = <K extends keyof RuntimeSettings>(key: K, value: RuntimeSettings[K]) => {
     setRuntimeSettings((current) => ({
@@ -466,7 +497,7 @@ function App() {
 
   return (
     <div className="system-shell">
-      <div className={settingsOpen ? "system settings-open" : "system"}>
+      <div className={systemClassName}>
         <div className="console-topbar">
           <div className="console-mark">
             <div className="console-title">MAGI COUNCIL DECISION SYSTEM</div>
@@ -479,6 +510,7 @@ function App() {
             value={draftQuestion}
             promptState={promptState}
             busy={responsePending}
+            route={lastRunRoute}
             highStakesEnabled={runtimeSettings.highStakesMode === "strict"}
             systemMessage={runtimeError}
             verdictText={state.aggregation.decisionText}
@@ -489,14 +521,23 @@ function App() {
             onOpenVerdict={() => setVerdictOpen(true)}
             onToggleHighStakes={() =>
               setRuntimeSettings((current) => ({
-                ...current,
-                highStakesMode: current.highStakesMode === "strict" ? "normal" : "strict",
+                ...(current.highStakesMode === "strict"
+                  ? {
+                    ...current,
+                    highStakesMode: "normal",
+                  }
+                  : {
+                    ...current,
+                    highStakesMode: "strict",
+                    executionPolicy: "allowlisted",
+                  }),
               }))
             }
           />
 
           <CouncilDisplay
             state={state}
+            route={lastRunRoute}
             phaseLabel={phaseLabel}
             syncLabel={syncLabel}
             onInspect={(memberId: MemberId) =>
@@ -510,6 +551,7 @@ function App() {
           open={settingsOpen}
           settings={runtimeSettings}
           diagnostics={diagnostics}
+          openclawUrl={openclawUrl}
           extensionCode={state.extensionCode}
           phaseLabel={phaseLabel}
           syncLabel={syncLabel}
@@ -547,6 +589,11 @@ function App() {
         <CouncilSummaryModal
           open={verdictOpen}
           question={state.question}
+          route={lastRunRoute}
+          routeReason={runRouteReason}
+          outcomeCode={runOutcomeCode}
+          councilExecuted={runCouncilExecuted}
+          assistantResult={runAssistantResult}
           aggregation={state.aggregation}
           members={state.members}
           onClose={() => setVerdictOpen(false)}

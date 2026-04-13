@@ -11,6 +11,7 @@ type SettingsDrawerProps = {
   open: boolean;
   settings: RuntimeSettings;
   diagnostics: BridgeDiagnostics | null;
+  openclawUrl: string;
   extensionCode: string;
   phaseLabel: string;
   syncLabel: string;
@@ -66,8 +67,8 @@ function OptionButtonGroup<T extends string>({
 }
 
 const COUNCIL_MODE_OPTIONS: OptionButtonGroupProps<CouncilMode>["options"] = [
-  { value: "auto", label: "AUTO", description: "MAGI classifies the question itself." },
-  { value: "quick", label: "QUICK", description: "Cheaper first-pass council." },
+  { value: "auto", label: "AUTO", description: "MAGI chooses the council depth." },
+  { value: "quick", label: "QUICK", description: "Lean first-pass council." },
   { value: "standard", label: "STANDARD", description: "Normal three-seat review." },
   { value: "critical", label: "CRITICAL", description: "Highest scrutiny and rebuttal pressure." },
 ];
@@ -94,6 +95,7 @@ export function SettingsDrawer({
   open,
   settings,
   diagnostics,
+  openclawUrl,
   extensionCode,
   phaseLabel,
   syncLabel,
@@ -153,13 +155,16 @@ export function SettingsDrawer({
             These controls are applied per question through the live MAGI bridge. They do not touch
             your global OpenClaw config or existing services.
           </p>
+          <p className="drawer-copy">
+            MAGI Council is controlled from the main query panel. When it is OFF, MAGI stays in assistant-first mode.
+          </p>
           {runtimeError ? <p className="drawer-alert">{runtimeError}</p> : null}
         </div>
 
         <div className="drawer-section settings-grid">
           <OptionButtonGroup
             label="COUNCIL MODE"
-            helper="Choose how much council weight MAGI should spend on this question."
+            helper="Applied only when MAGI Council is enabled from the main screen."
             value={settings.councilMode}
             options={COUNCIL_MODE_OPTIONS}
             onChange={(value) => onSettingsChange("councilMode", value)}
@@ -195,6 +200,14 @@ export function SettingsDrawer({
           <button type="button" className="clear-button" onClick={onResetSettings}>
             RESET DEFAULTS
           </button>
+          <a
+            className="matrix-button"
+            href={openclawUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            OPEN OPENCLAW
+          </a>
           <button type="button" className="matrix-button" onClick={onLogout}>
             LOCK CONSOLE
           </button>

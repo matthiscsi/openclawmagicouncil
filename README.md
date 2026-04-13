@@ -26,7 +26,8 @@ The seats stay role-distinct through isolated workspaces, prompts, and different
 - Bridge login UX: auto-session fallback enabled (bridge reads gateway password from env/env-file when needed)
 - Exposure model: MAGI stays tailnet-only; it is not published on Tailscale Funnel
 - Cost posture: heartbeat disabled, low default reasoning, low default subagent thinking, tiered council depth (`quick` / `standard` / `critical`)
-- Execution posture: conductor seat now has expanded allowlisted execution (`exec`, `process`, `web_search`, `web_fetch`) with Docker sandbox network enabled for real task execution
+- Execution posture: conductor seat now uses host-native execution (`sandbox.mode: "off"`) with expanded allowlisted tools (`exec`, `process`, `web_search`, `web_fetch`); council seats remain sandboxed
+- Council button posture: when `MAGI COUNCIL` is enabled in the UI, the bridge forces council escalation and `executionPolicy=allowlisted` so quorum-approved plans execute in-run
 
 Related host/service details now live in `workspaces/magi/SERVER.md`.
 Runtime architecture details now live in `docs/runtime-architecture.md`.
@@ -34,7 +35,7 @@ Identity/config baseline details now live in `docs/council-identity-and-config.m
 
 ## What Is Included
 
-- `config/openclaw.json`: locked-down multi-agent OpenClaw config
+- `config/openclaw.json`: multi-agent OpenClaw config
 - `workspaces/*`: the four agent persona files
 - `.prose/magi-council.prose`: manual OpenProse workflow for the council loop
 - `plugins/magi-admin`: a local plugin with allowlisted MAGI-only admin tools
@@ -46,12 +47,10 @@ Identity/config baseline details now live in `docs/council-identity-and-config.m
 
 This kit is opinionated:
 
-- no free host shell for the agent
-- no direct access to Pi-hole, Jellyfin, Nextcloud, or unrelated service data
-- no direct credentials for unrelated homeserver apps
-- only `magi` may execute safe admin actions, and only through the `magi-admin` plugin
-- council seats are sandboxed and read-mostly
-- sandbox networking is disabled by default (`network: "none"`)
+- `magi` is operator-authorized for host-native execution and broad system administration
+- council seats remain sandboxed and read-mostly
+- council mode can be used as governance before execution, with Casper veto on `critical-risk`
+- high-impact changes should still include explicit rollback notes in the final report
 
 ## Quick Start
 
@@ -185,6 +184,24 @@ The MAGI frontend in `ui/` is now a live control surface backed by `magi-ui-brid
 - Local URL: `http://127.0.0.1:18811/`
 - Tailnet URL: `https://homeserver.tailf7a295.ts.net:18811/`
 - Live features: seat state resolution, verdict inspection modal, runtime controls, diagnostics, and persisted run history
+- Runtime contract:
+  - route truth is explicit per run (`route`, `routeReason`, `councilExecuted`, `outcomeCode`)
+  - assistant-first runs are first-class and no longer treated as pseudo-council execution in dossier rendering
+  - history entries are schema-versioned and retention-bounded
+  - policy tuning is config-driven via `config/runtime-policy.json` (or `$MAGI_HOME/config/runtime-policy.json` on deployed hosts)
+- Informational-answer optimizations:
+  - assistant-first routing is enabled by default: prompts are answered directly as personal-AI guidance unless MAGI Council is explicitly enabled from the main query panel
+  - informational verdicts now prioritize concrete user-facing answers over process commentary
+  - personal/casual prompts are treated as full assistant queries (informational guidance), not forced into yes/no framing
+  - bounded live weather lookups are auto-resolved for forecast questions (with day-by-day details in the decree)
+  - if a requested weather week is beyond normal forecast horizon, MAGI now returns a seasonal historical outlook instead of a dead-end meta response
+  - simple arithmetic questions are auto-solved deterministically in the bridge
+  - unit conversions, currency conversions, local date/time lookups, and short link summaries are auto-resolved when recognized
+  - short definition-style prompts can be grounded via a lightweight web summary fallback
+  - low-risk informational prompts can auto-tune to cheaper `quick` + `low` reasoning when runtime settings are left on `auto`
+  - when informational answers are still meta/non-concrete, MAGI triggers a direct-answer fallback before returning to the UI
+  - stalled runs now use timeout/stall fallback so the UI resolves with a usable advisory answer instead of hanging indefinitely
+  - if the OpenClaw gateway drops during submission, bridge-level offline fallback returns a concrete best-effort answer for deterministic/personal prompts instead of a hard API failure
 
 Run it locally with:
 
@@ -199,6 +216,13 @@ Create a production build with:
 ```bash
 cd ui
 npm run build
+```
+
+Run bridge contract tests with:
+
+```bash
+cd ui
+npm run test:bridge
 ```
 
 ## Primary References
